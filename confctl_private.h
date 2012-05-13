@@ -10,9 +10,10 @@ struct buf {
 struct confctl_var {
 	struct confctl_var	*cv_next;
 	struct confctl_var	*cv_parent;
-	char 			*cv_name;
-	char			*cv_value;
+	struct buf		*cv_name;
+	struct buf		*cv_value;
 	struct confctl_var	*cv_first;
+	struct confctl_var	*cv_last;
 };
 
 struct confctl {

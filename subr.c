@@ -9,55 +9,6 @@
 #include "confctl.h"
 #include "confctl_private.h"
 
-static struct confctl_var *
-cv_new(struct confctl_var *parent, const char *name)
-{
-	struct confctl_var *cv;
-
-	cv = calloc(sizeof(*cv), 1);
-	if (cv == NULL)
-		err(1, "malloc");
-
-	if (parent != NULL) {
-		assert(parent->cv_value == NULL);
-		cv->cv_parent = parent;
-		/* XXX: Kolejność. */
-		cv->cv_next = cv->cv_parent->cv_first;
-		cv->cv_parent->cv_first = cv;
-	}
-
-	cv->cv_name = strdup(name);
-	if (cv->cv_name == NULL)
-		err(1, "strdup");
-
-	return (cv);
-}
-
-static struct confctl_var *
-cv_new_value(struct confctl_var *parent, const char *name, const char *value)
-{
-	struct confctl_var *cv;
-
-	cv = cv_new(parent, name);
-	cv->cv_value = strdup(value);
-	if (cv->cv_value == NULL)
-		err(1, "strdup");
-
-	return (cv);
-}
-
-static struct confctl *
-confctl_new(void)
-{
-	struct confctl *cc;
-
-	cc = calloc(sizeof(*cc), 1);
-	if (cc == NULL)
-		err(1, "malloc");
-	cc->cc_first = cv_new(NULL, ".");
-	return (cc);
-}
-
 static struct buf *
 buf_new(void)
 {
@@ -72,6 +23,7 @@ buf_new(void)
 static void
 buf_delete(struct buf *b)
 {
+
 	if (b->b_buf != NULL)
 		free(b->b_buf);
 #if 1
@@ -83,6 +35,7 @@ buf_delete(struct buf *b)
 static void
 buf_append(struct buf *b, char ch)
 {
+
 	if (b->b_len + 1 >= b->b_allocated) {
 		if (b->b_allocated == 0)
 			b->b_allocated = 1; /* XXX */
@@ -104,12 +57,77 @@ buf_finish(struct buf *b)
 	buf_append(b, '\0');
 }
 
-static char *
+static struct buf *
+buf_new_from_str(const char *str)
+{
+	struct buf *b;
+	const char *p;
+
+	b = buf_new();
+	for (p = str; *p != '\0'; p++)
+		buf_append(b, *p);
+	buf_finish(b);
+	return (b);
+}
+
+static struct confctl_var *
+cv_new(struct confctl_var *parent, struct buf *name)
+{
+	struct confctl_var *cv;
+
+	cv = calloc(sizeof(*cv), 1);
+	if (cv == NULL)
+		err(1, "malloc");
+
+	assert(name != NULL);
+	assert(name->b_len > 1);
+
+	if (parent != NULL) {
+		assert(parent->cv_value == NULL);
+		cv->cv_parent = parent;
+		if (cv->cv_parent->cv_last == NULL) {
+			assert(cv->cv_parent->cv_first == NULL);
+			cv->cv_parent->cv_first = cv;
+		} else {
+			assert(cv->cv_parent->cv_first != NULL);
+			cv->cv_parent->cv_last->cv_next = cv;
+		}
+		cv->cv_parent->cv_last = cv;
+	}
+
+	cv->cv_name = name;
+
+	return (cv);
+}
+
+static struct confctl_var *
+cv_new_value(struct confctl_var *parent, struct buf *name, struct buf *value)
+{
+	struct confctl_var *cv;
+
+	cv = cv_new(parent, name);
+	cv->cv_value = value;
+
+	return (cv);
+}
+
+static struct confctl *
+confctl_new(void)
+{
+	struct confctl *cc;
+
+	cc = calloc(sizeof(*cc), 1);
+	if (cc == NULL)
+		err(1, "malloc");
+	cc->cc_first = cv_new(NULL, buf_new_from_str("."));
+	return (cc);
+}
+
+static struct buf *
 confctl_read_word(FILE *fp)
 {
 	int ch;
 	struct buf *b;
-	char *str;
 
 	b = buf_new();
 
@@ -119,17 +137,48 @@ confctl_read_word(FILE *fp)
 			break;
 		if (ferror(fp) != 0)
 			err(1, "fgetc");
-		if (isspace(ch))
+		if (isspace(ch)) {
+			if (b->b_len == 0)
+				continue;
 			break;
+		}
 		buf_append(b, ch);
 	}
 
-	str = strdup(b->b_buf);
-	if (str == NULL)
-		err(1, "strdup");
-	buf_delete(b);
+	if (b->b_len == 0) {
+		buf_delete(b);
+		return (NULL);
+	}
 
-	return (str);
+	buf_finish(b);
+	return (b);
+}
+
+static bool
+confctl_var_load(struct confctl_var *parent, FILE *fp)
+{
+	struct buf *name, *value;
+	bool closing_bracket;
+	struct confctl_var *cv;
+
+	name = confctl_read_word(fp);
+	if (name == NULL)
+		return (true);
+	if (strcmp(name->b_buf, "}") == 0)
+		return (true);
+	value = confctl_read_word(fp);
+	if (value == NULL)
+		errx(1, "name without value at EOF");
+	if (strcmp(value->b_buf, "{") == 0) {
+		cv = cv_new(parent, name);
+		for (;;) {
+			closing_bracket = confctl_var_load(cv, fp);
+			if (closing_bracket)
+				break;
+		}
+	} else
+		cv_new_value(parent, name, value);
+	return (false);
 }
 
 struct confctl *
@@ -137,7 +186,6 @@ confctl_load(const char *path)
 {
 	struct confctl *cc;
 	FILE *fp;
-	char *name, *value;
 
 	fp = fopen(path, "r");
 	if (fp == NULL)
@@ -149,9 +197,7 @@ confctl_load(const char *path)
 			break;
 		if (ferror(fp) != 0)
 			err(1, "fgetc");
-		name = confctl_read_word(fp);
-		value = confctl_read_word(fp);
-		cv_new_value(cc->cc_first, name, value);
+		confctl_var_load(cc->cc_first, fp);
 	}
 
 	return (cc);
@@ -173,7 +219,9 @@ static const char *
 confctl_var_name(const struct confctl_var *cv)
 {
 
-	return (cv->cv_name);
+	assert(cv->cv_name != NULL);
+	assert(cv->cv_name->b_buf != NULL);
+	return (cv->cv_name->b_buf);
 }
 
 static const char *
@@ -182,7 +230,8 @@ confctl_var_value(const struct confctl_var *cv)
 
 	assert(cv->cv_first == NULL);
 	assert(cv->cv_value != NULL);
-	return (cv->cv_value);
+	assert(cv->cv_value->b_buf != NULL);
+	return (cv->cv_value->b_buf);
 }
 
 static struct confctl_var *
@@ -206,12 +255,12 @@ confctl_var_print_c(struct confctl_var *cv, int indent)
 	struct confctl_var *child;
 
 	if (confctl_var_is_container(cv)) {
-		printf("%*s %s {\n", indent, " ", confctl_var_name(cv));
+		printf("%*s%s {\n", indent, " ", confctl_var_name(cv));
 		for (child = confctl_var_first(cv); child != NULL; child = confctl_var_next(child))
 			confctl_var_print_c(child, indent + 8);
 		printf("%*s}\n", indent, " ");
 	} else {
-		printf("%*s%s=%s\n", indent, " ", confctl_var_name(cv), confctl_var_value(cv));
+		printf("%*s%s %s\n", indent, " ", confctl_var_name(cv), confctl_var_value(cv));
 	}
 }
 
@@ -226,7 +275,7 @@ confctl_var_print_lines(struct confctl_var *cv, const char *prefix)
 		if (newprefix == NULL)
 			err(1, "asprintf");
 		for (child = confctl_var_first(cv); child != NULL; child = confctl_var_next(child))
-			confctl_var_print_lines(child, prefix);
+			confctl_var_print_lines(child, newprefix);
 		free(newprefix);
 	} else {
 		printf("%s.%s=%s\n", prefix, confctl_var_name(cv), confctl_var_value(cv));

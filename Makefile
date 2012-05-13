@@ -1,7 +1,7 @@
 all: confctl
 
 confctl: *.c
-	cc -o confctl -Wall -ggdb *.c
+	cc -o confctl -Wall -pedantic -ggdb *.c
 
 clean:
-	rm -f *.o confctl
+	rm -rf *.o confctl *.dSYM
