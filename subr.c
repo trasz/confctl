@@ -179,7 +179,7 @@ confctl_new(void)
 	cc = calloc(sizeof(*cc), 1);
 	if (cc == NULL)
 		err(1, "malloc");
-	cc->cc_root = cv_new(NULL, buf_new_from_str("."));
+	cc->cc_root = cv_new(NULL, buf_new_from_str("HKEY_CLASSES_ROOT"));
 
 	return (cc);
 }
@@ -375,12 +375,14 @@ confctl_print_lines(struct confctl *cc, FILE *fp)
 static struct confctl_var *
 cv_from_line(const char *line, bool want_value)
 {
-	struct confctl_var *cv, *parent = NULL, *root = NULL;
+	struct confctl_var *cv, *parent, *root;
 	char *name, *value, *next, *tofree;
 
 	next = tofree = strdup(line);
 	if (next == NULL)
 		err(1, "strdup");
+
+	root = parent = cv_new(NULL, buf_new_from_str("HKEY_CLASSES_ROOT"));
 
 	while ((name = strsep(&next, ".")) != NULL) {
 		value = name;
@@ -392,8 +394,6 @@ cv_from_line(const char *line, bool want_value)
 		} else
 			cv = cv_new(parent, buf_new_from_str(name));
 		parent = cv;
-		if (root == NULL)
-			root = parent;
 	}
 
 	if (want_value && cv->cv_value == NULL)
@@ -467,11 +467,19 @@ confctl_var_filter(struct confctl_var *cv, struct confctl_var *filter)
 }
 
 void
-confctl_filter_line(struct confctl *cc, const char *line)
+confctl_filter(struct confctl *cc, struct confctl_var *filter)
 {
-	struct confctl_var *filter, *cv, *tmp;
+	confctl_var_filter(cc->cc_root, filter);
+}
 
-	filter = cv_from_line(line, false);
-	TAILQ_FOREACH_SAFE(cv, &cc->cc_root->cv_vars, cv_next, tmp)
-		confctl_var_filter(cv, filter);
+void
+confctl_var_from_line(struct confctl_var **cvp, const char *line)
+{
+	struct confctl_var *newcv;
+
+	if (*cvp == NULL)
+		*cvp = cv_new(NULL, buf_new_from_str("HKEY_CLASSES_ROOT"));
+
+	newcv = cv_from_line(line, false);
+	confctl_var_merge(*cvp, newcv);
 }

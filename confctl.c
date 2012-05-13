@@ -36,17 +36,20 @@
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: confctl [-c] [-w name=value] config-path [name]\n");
+	fprintf(stderr, "usage: confctl [-c] config-path [name...]\n");
+	fprintf(stderr, "       confctl [-ac] config-path\n");
+	fprintf(stderr, "       confctl -w name=value config-path\n");
 	exit(1);
 }
 
 int
 main(int argc, char **argv)
 {
-	int ch;
+	int ch, i;
 	bool cflag = false, aflag = false;
 	char *wflag = NULL;
 	struct confctl *cc;
+	struct confctl_var *filter = NULL;
 
 	while ((ch = getopt(argc, argv, "acw:")) != -1) {
 		switch (ch) {
@@ -71,8 +74,6 @@ main(int argc, char **argv)
 
 	if (argc < 1)
 		errx(1, "missing config file path");
-	if (argc > 2)
-		usage();
 	if (aflag && wflag)
 		errx(1, "-a and -w are mutually exclusive");
 	if (cflag && wflag)
@@ -85,8 +86,9 @@ main(int argc, char **argv)
 	cc = confctl_load(argv[0]);
 	if (wflag == NULL) {
 		if (!aflag) {
-			assert(argv[1] != NULL);
-			confctl_filter_line(cc, argv[1]);
+			for (i = 1; i < argc; i++)
+				confctl_var_from_line(&filter, argv[i]);
+			confctl_filter(cc, filter);
 		}
 		if (cflag)
 			confctl_print_c(cc, stdout);
