@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "confctl.h"
 #include "confctl_private.h"
@@ -203,6 +204,31 @@ confctl_load(const char *path)
 	return (cc);
 }
 
+void
+confctl_save(struct confctl *cc, const char *path)
+{
+	FILE *fp;
+	int error;
+
+	/*
+	 * XXX: Modifying in place.
+	 */
+
+	fp = fopen(path, "w");
+	if (fp == NULL)
+		err(1, "unable to open %s for writing", path);
+	confctl_print_c(cc, fp);
+	error = fflush(fp);
+	if (error != 0)
+		err(1, "fflush");
+	error = fsync(fileno(fp));
+	if (error != 0)
+		err(1, "sync");
+	error = fclose(fp);
+	if (error != 0)
+		err(1, "fclose");
+}
+
 static bool
 confctl_var_is_container(const struct confctl_var *cv)
 {
@@ -250,22 +276,22 @@ confctl_var_next(const struct confctl_var *cv)
 }
 
 static void
-confctl_var_print_c(struct confctl_var *cv, int indent)
+confctl_var_print_c(struct confctl_var *cv, FILE *fp, int indent)
 {
 	struct confctl_var *child;
 
 	if (confctl_var_is_container(cv)) {
-		printf("%*s%s {\n", indent, "", confctl_var_name(cv));
+		fprintf(fp, "%*s%s {\n", indent, "", confctl_var_name(cv));
 		for (child = confctl_var_first(cv); child != NULL; child = confctl_var_next(child))
-			confctl_var_print_c(child, indent + 8);
-		printf("%*s}\n", indent, "");
+			confctl_var_print_c(child, fp, indent + 8);
+		fprintf(fp, "%*s}\n", indent, "");
 	} else {
-		printf("%*s%s %s\n", indent, "", confctl_var_name(cv), confctl_var_value(cv));
+		fprintf(fp, "%*s%s %s\n", indent, "", confctl_var_name(cv), confctl_var_value(cv));
 	}
 }
 
 static void
-confctl_var_print_lines(struct confctl_var *cv, const char *prefix)
+confctl_var_print_lines(struct confctl_var *cv, FILE *fp, const char *prefix)
 {
 	struct confctl_var *child;
 	char *newprefix;
@@ -278,29 +304,29 @@ confctl_var_print_lines(struct confctl_var *cv, const char *prefix)
 		if (newprefix == NULL)
 			err(1, "asprintf");
 		for (child = confctl_var_first(cv); child != NULL; child = confctl_var_next(child))
-			confctl_var_print_lines(child, newprefix);
+			confctl_var_print_lines(child, fp, newprefix);
 		free(newprefix);
 	} else
 		if (prefix != NULL)
-			printf("%s.%s=%s\n", prefix, confctl_var_name(cv), confctl_var_value(cv));
+			fprintf(fp, "%s.%s=%s\n", prefix, confctl_var_name(cv), confctl_var_value(cv));
 		else
-			printf("%s=%s\n", confctl_var_name(cv), confctl_var_value(cv));
+			fprintf(fp, "%s=%s\n", confctl_var_name(cv), confctl_var_value(cv));
 }
 
 void
-confctl_print_c(struct confctl *cc)
+confctl_print_c(struct confctl *cc, FILE *fp)
 {
 	struct confctl_var *child;
 
 	for (child = confctl_var_first(cc->cc_first); child != NULL; child = confctl_var_next(child))
-		confctl_var_print_c(child, 0);
+		confctl_var_print_c(child, fp, 0);
 }
 
 void
-confctl_print_lines(struct confctl *cc)
+confctl_print_lines(struct confctl *cc, FILE *fp)
 {
 	struct confctl_var *child;
 
 	for (child = confctl_var_first(cc->cc_first); child != NULL; child = confctl_var_next(child))
-		confctl_var_print_lines(child, NULL);
+		confctl_var_print_lines(child, fp, NULL);
 }

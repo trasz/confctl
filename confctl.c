@@ -46,11 +46,14 @@ main(int argc, char **argv)
 	cc = confctl_load(argv[0]);
 	if (wflag == NULL) {
 		if (cflag)
-			confctl_print_c(cc);
+			confctl_print_c(cc, stdout);
 		else
-			confctl_print_lines(cc);
+			confctl_print_lines(cc, stdout);
 	} else {
-		printf("wflag %s\n", wflag);
+		/*
+		 * XXX: Modify stuff.
+		 */
+		confctl_save(cc, argv[0]);
 	}
 
 	return (0);
