@@ -1,3 +1,4 @@
+#include <sys/queue.h>
 #include <assert.h>
 #include <ctype.h>
 #include <err.h>
@@ -28,7 +29,7 @@ buf_delete(struct buf *b)
 	if (b->b_buf != NULL)
 		free(b->b_buf);
 #if 1
-	memset(b, 0, sizeof(*b)); /* XXX: For debugging. */
+	memset(b, 42, sizeof(*b)); /* XXX: For debugging. */
 #endif
 	free(b);
 }
@@ -86,19 +87,41 @@ cv_new(struct confctl_var *parent, struct buf *name)
 	if (parent != NULL) {
 		assert(parent->cv_value == NULL);
 		cv->cv_parent = parent;
-		if (cv->cv_parent->cv_last == NULL) {
-			assert(cv->cv_parent->cv_first == NULL);
-			cv->cv_parent->cv_first = cv;
-		} else {
-			assert(cv->cv_parent->cv_first != NULL);
-			cv->cv_parent->cv_last->cv_next = cv;
-		}
-		cv->cv_parent->cv_last = cv;
+		TAILQ_INSERT_TAIL(&parent->cv_vars, cv, cv_next);
 	}
 
 	cv->cv_name = name;
+	TAILQ_INIT(&cv->cv_vars);
 
 	return (cv);
+}
+
+static void
+cv_delete_quick(struct confctl_var *cv)
+{
+	struct confctl_var *child, *tmp;
+
+	TAILQ_FOREACH_SAFE(child, &cv->cv_vars, cv_next, tmp)
+		cv_delete_quick(child);
+
+	buf_delete(cv->cv_name);
+	if (cv->cv_value != NULL)
+		buf_delete(cv->cv_value);
+
+#if 1
+	memset(cv, 1984, sizeof(*cv)); /* XXX: For debugging. */
+#endif
+
+	free(cv);
+}
+
+static void
+cv_delete(struct confctl_var *cv)
+{
+
+	if (cv->cv_parent != NULL)
+		TAILQ_REMOVE(&cv->cv_parent->cv_vars, cv, cv_next);
+	cv_delete_quick(cv);
 }
 
 static struct confctl_var *
@@ -120,7 +143,8 @@ confctl_new(void)
 	cc = calloc(sizeof(*cc), 1);
 	if (cc == NULL)
 		err(1, "malloc");
-	cc->cc_first = cv_new(NULL, buf_new_from_str("."));
+	cc->cc_root = cv_new(NULL, buf_new_from_str("."));
+
 	return (cc);
 }
 
@@ -198,7 +222,7 @@ confctl_load(const char *path)
 			break;
 		if (ferror(fp) != 0)
 			err(1, "fgetc");
-		confctl_var_load(cc->cc_first, fp);
+		confctl_var_load(cc->cc_root, fp);
 	}
 
 	return (cc);
@@ -233,11 +257,8 @@ static bool
 confctl_var_is_container(const struct confctl_var *cv)
 {
 
-	if (cv->cv_first != NULL) {
-		assert(cv->cv_value == NULL);
+	if (cv->cv_value == NULL)
 		return (true);
-	}
-	assert(cv->cv_value != NULL);
 	return (false);
 }
 
@@ -254,25 +275,9 @@ static const char *
 confctl_var_value(const struct confctl_var *cv)
 {
 
-	assert(cv->cv_first == NULL);
 	assert(cv->cv_value != NULL);
 	assert(cv->cv_value->b_buf != NULL);
 	return (cv->cv_value->b_buf);
-}
-
-static struct confctl_var *
-confctl_var_first(const struct confctl_var *cv)
-{
-
-	assert(confctl_var_is_container(cv));
-	return (cv->cv_first);
-}
-
-static struct confctl_var *
-confctl_var_next(const struct confctl_var *cv)
-{
-
-	return (cv->cv_next);
 }
 
 static void
@@ -282,7 +287,7 @@ confctl_var_print_c(struct confctl_var *cv, FILE *fp, int indent)
 
 	if (confctl_var_is_container(cv)) {
 		fprintf(fp, "%*s%s {\n", indent, "", confctl_var_name(cv));
-		for (child = confctl_var_first(cv); child != NULL; child = confctl_var_next(child))
+		TAILQ_FOREACH(child, &cv->cv_vars, cv_next)
 			confctl_var_print_c(child, fp, indent + 8);
 		fprintf(fp, "%*s}\n", indent, "");
 	} else {
@@ -303,7 +308,7 @@ confctl_var_print_lines(struct confctl_var *cv, FILE *fp, const char *prefix)
 			asprintf(&newprefix, "%s", confctl_var_name(cv));
 		if (newprefix == NULL)
 			err(1, "asprintf");
-		for (child = confctl_var_first(cv); child != NULL; child = confctl_var_next(child))
+		TAILQ_FOREACH(child, &cv->cv_vars, cv_next)
 			confctl_var_print_lines(child, fp, newprefix);
 		free(newprefix);
 	} else
@@ -318,7 +323,7 @@ confctl_print_c(struct confctl *cc, FILE *fp)
 {
 	struct confctl_var *child;
 
-	for (child = confctl_var_first(cc->cc_first); child != NULL; child = confctl_var_next(child))
+	TAILQ_FOREACH(child, &cc->cc_root->cv_vars, cv_next)
 		confctl_var_print_c(child, fp, 0);
 }
 
@@ -327,6 +332,65 @@ confctl_print_lines(struct confctl *cc, FILE *fp)
 {
 	struct confctl_var *child;
 
-	for (child = confctl_var_first(cc->cc_first); child != NULL; child = confctl_var_next(child))
+	TAILQ_FOREACH(child, &cc->cc_root->cv_vars, cv_next)
 		confctl_var_print_lines(child, fp, NULL);
+}
+
+static struct confctl_var *
+cv_from_line(const char *line)
+{
+	struct confctl_var *cv, *parent = NULL, *root = NULL;
+	char *name, *str, *tofree;
+
+	str = tofree = strdup(line);
+	if (str == NULL)
+		err(1, "strdup");
+
+	while ((name = strsep(&str, ".")) != NULL) {
+		cv = cv_new(parent, buf_new_from_str(name));
+		parent = cv;
+		if (root == NULL)
+			root = parent;
+	}
+
+	/*
+	 * Last variable doesn't contain neither value nor subvariables.
+	 */
+	cv->cv_value = buf_new_from_str("kopytko");
+
+	free(tofree);
+
+	return (root);
+}
+
+void
+confctl_parse_line(struct confctl *cc, const char *line)
+{
+}
+
+static void
+confctl_var_filter(struct confctl_var *cv, struct confctl_var *filter)
+{
+	struct confctl_var *child, *tmp;
+
+	if (filter == NULL)
+		return;
+
+	if (strcmp(filter->cv_name->b_buf, cv->cv_name->b_buf) != 0) {
+		cv_delete(cv);
+		return;
+	}
+
+	TAILQ_FOREACH_SAFE(child, &cv->cv_vars, cv_next, tmp)
+		confctl_var_filter(child, TAILQ_FIRST(&filter->cv_vars));
+}
+
+void
+confctl_filter_line(struct confctl *cc, const char *line)
+{
+	struct confctl_var *filter, *cv, *tmp;
+
+	filter = cv_from_line(line);
+	TAILQ_FOREACH_SAFE(cv, &cc->cc_root->cv_vars, cv_next, tmp)
+		confctl_var_filter(cv, filter);
 }
