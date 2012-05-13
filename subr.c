@@ -332,7 +332,7 @@ confctl_var_print_c(struct confctl_var *cv, FILE *fp, int indent)
 }
 
 static void
-confctl_var_print_lines(struct confctl_var *cv, FILE *fp, const char *prefix)
+confctl_var_print_lines(struct confctl_var *cv, FILE *fp, const char *prefix, bool values_only)
 {
 	struct confctl_var *child;
 	char *newprefix;
@@ -345,10 +345,12 @@ confctl_var_print_lines(struct confctl_var *cv, FILE *fp, const char *prefix)
 		if (newprefix == NULL)
 			err(1, "asprintf");
 		TAILQ_FOREACH(child, &cv->cv_vars, cv_next)
-			confctl_var_print_lines(child, fp, newprefix);
+			confctl_var_print_lines(child, fp, newprefix, values_only);
 		free(newprefix);
 	} else
-		if (prefix != NULL)
+		if (values_only)
+			fprintf(fp, "%s\n", confctl_var_value(cv));
+		else if (prefix != NULL)
 			fprintf(fp, "%s.%s=%s\n", prefix, confctl_var_name(cv), confctl_var_value(cv));
 		else
 			fprintf(fp, "%s=%s\n", confctl_var_name(cv), confctl_var_value(cv));
@@ -364,12 +366,12 @@ confctl_print_c(struct confctl *cc, FILE *fp)
 }
 
 void
-confctl_print_lines(struct confctl *cc, FILE *fp)
+confctl_print_lines(struct confctl *cc, FILE *fp, bool values_only)
 {
 	struct confctl_var *child;
 
 	TAILQ_FOREACH(child, &cc->cc_root->cv_vars, cv_next)
-		confctl_var_print_lines(child, fp, NULL);
+		confctl_var_print_lines(child, fp, NULL, values_only);
 }
 
 static struct confctl_var *

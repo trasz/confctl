@@ -46,17 +46,20 @@ int
 main(int argc, char **argv)
 {
 	int ch, i;
-	bool cflag = false, aflag = false;
+	bool cflag = false, aflag = false, nflag = false;
 	struct confctl *cc;
 	struct confctl_var *filter = NULL, *merge = NULL;
 
-	while ((ch = getopt(argc, argv, "acw:")) != -1) {
+	while ((ch = getopt(argc, argv, "acnw:")) != -1) {
 		switch (ch) {
 			case 'a':
 				aflag = true;
 				break;
 			case 'c':
 				cflag = true;
+				break;
+			case 'n':
+				nflag = true;
 				break;
 			case 'w':
 				confctl_var_from_line(&merge, optarg);
@@ -77,6 +80,10 @@ main(int argc, char **argv)
 		errx(1, "-a and -w are mutually exclusive");
 	if (cflag && merge)
 		errx(1, "-c and -w are mutually exclusive");
+	if (nflag && merge)
+		errx(1, "-n and -w are mutually exclusive");
+	if (nflag && cflag)
+		errx(1, "-n and -c are mutually exclusive");
 	if (aflag && argc > 1)
 		errx(1, "-a and variable names are mutually exclusive");
 	if (!aflag && !merge && argc == 1)
@@ -92,7 +99,7 @@ main(int argc, char **argv)
 		if (cflag)
 			confctl_print_c(cc, stdout);
 		else
-			confctl_print_lines(cc, stdout);
+			confctl_print_lines(cc, stdout, nflag);
 	} else {
 		confctl_merge(cc, merge);
 #if 0
