@@ -410,11 +410,9 @@ confctl_var_merge(struct confctl_var *cv, struct confctl_var *newcv)
 	if (strcmp(cv->cv_name->b_buf, newcv->cv_name->b_buf) != 0)
 		return (false);
 
-	if (cv->cv_value != NULL) {
-		if (newcv->cv_value == NULL)
-			errx(1, "cannot add subvariable %s to variable %s", newcv->cv_name->b_buf, cv->cv_name->b_buf);
+	if (TAILQ_EMPTY(&newcv->cv_vars)) {
 		cv->cv_value = newcv->cv_value;
-		newcv->cv_value = NULL;
+		cv->cv_vars = newcv->cv_vars;
 		return (true);
 	}
 
