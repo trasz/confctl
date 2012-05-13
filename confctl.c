@@ -47,7 +47,6 @@ main(int argc, char **argv)
 {
 	int ch, i;
 	bool cflag = false, aflag = false;
-	char *wflag = NULL;
 	struct confctl *cc;
 	struct confctl_var *filter = NULL, *merge = NULL;
 
@@ -60,9 +59,7 @@ main(int argc, char **argv)
 				cflag = true;
 				break;
 			case 'w':
-				wflag = strdup(optarg);
-				if (wflag == NULL)
-					err(1, "strdup");
+				confctl_var_from_line(&merge, optarg);
 				break;
 			case '?':
 			default:
@@ -74,17 +71,19 @@ main(int argc, char **argv)
 
 	if (argc < 1)
 		errx(1, "missing config file path");
-	if (aflag && wflag)
+	if (merge && argc > 1)
+		errx(1, "-w and variable names are mutually exclusive");
+	if (aflag && merge)
 		errx(1, "-a and -w are mutually exclusive");
-	if (cflag && wflag)
+	if (cflag && merge)
 		errx(1, "-c and -w are mutually exclusive");
 	if (aflag && argc > 1)
 		errx(1, "-a and variable names are mutually exclusive");
-	if (!aflag && !wflag && argc == 1)
+	if (!aflag && !merge && argc == 1)
 		errx(1, "neither -a or variable names specified");
 
 	cc = confctl_load(argv[0]);
-	if (wflag == NULL) {
+	if (merge == NULL) {
 		if (!aflag) {
 			for (i = 1; i < argc; i++)
 				confctl_var_from_line(&filter, argv[i]);
@@ -95,7 +94,6 @@ main(int argc, char **argv)
 		else
 			confctl_print_lines(cc, stdout);
 	} else {
-		confctl_var_from_line(&merge, wflag);
 		confctl_merge(cc, merge);
 #if 0
 		confctl_save(cc, argv[0]);
