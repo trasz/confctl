@@ -35,7 +35,7 @@ struct confctl	*confctl_load(const char *path);
 void		confctl_save(struct confctl *cc, const char *path);
 void		confctl_print_c(struct confctl *confctl, FILE *fp);
 void		confctl_print_lines(struct confctl *confctl, FILE *fp);
-void		confctl_merge_line(struct confctl *confctl, const char *line);
+void		confctl_merge(struct confctl *confctl, struct confctl_var *merge);
 void		confctl_filter(struct confctl *confctl, struct confctl_var *filter);
 void		confctl_var_from_line(struct confctl_var **cvp, const char *line);
 

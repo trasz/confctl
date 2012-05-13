@@ -373,7 +373,7 @@ confctl_print_lines(struct confctl *cc, FILE *fp)
 }
 
 static struct confctl_var *
-cv_from_line(const char *line, bool want_value)
+cv_from_line(const char *line)
 {
 	struct confctl_var *cv, *parent, *root;
 	char *name, *value, *next, *tofree;
@@ -395,11 +395,6 @@ cv_from_line(const char *line, bool want_value)
 			cv = cv_new(parent, buf_new_from_str(name));
 		parent = cv;
 	}
-
-	if (want_value && cv->cv_value == NULL)
-		errx(1, "must specify a value");
-	if (!want_value && cv->cv_value != NULL)
-		errx(1, "must not specify a value");
 
 	free(tofree);
 
@@ -434,19 +429,10 @@ confctl_var_merge(struct confctl_var *cv, struct confctl_var *newcv)
 }
 
 void
-confctl_merge_line(struct confctl *cc, const char *line)
+confctl_merge(struct confctl *cc, struct confctl_var *merge)
 {
-	struct confctl_var *newcv, *cv;
-	bool done;
 
-	newcv = cv_from_line(line, true);
-	TAILQ_FOREACH(cv, &cc->cc_root->cv_vars, cv_next) {
-		done = confctl_var_merge(cv, newcv);
-		if (done)
-			return;
-	}
-	fprintf(stderr, "tld not found\n");
-	cv_reparent(newcv, cc->cc_root);
+	confctl_var_merge(cc->cc_root, merge);
 }
 
 static void
@@ -456,6 +442,8 @@ confctl_var_filter(struct confctl_var *cv, struct confctl_var *filter)
 
 	if (filter == NULL)
 		return;
+	if (filter->cv_value != NULL)
+		errx(1, "filter must not specify a value");
 
 	if (strcmp(filter->cv_name->b_buf, cv->cv_name->b_buf) != 0) {
 		cv_delete(cv);
@@ -469,6 +457,7 @@ confctl_var_filter(struct confctl_var *cv, struct confctl_var *filter)
 void
 confctl_filter(struct confctl *cc, struct confctl_var *filter)
 {
+
 	confctl_var_filter(cc->cc_root, filter);
 }
 
@@ -480,6 +469,6 @@ confctl_var_from_line(struct confctl_var **cvp, const char *line)
 	if (*cvp == NULL)
 		*cvp = cv_new(NULL, buf_new_from_str("HKEY_CLASSES_ROOT"));
 
-	newcv = cv_from_line(line, false);
+	newcv = cv_from_line(line);
 	confctl_var_merge(*cvp, newcv);
 }

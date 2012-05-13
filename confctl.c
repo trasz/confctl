@@ -49,7 +49,7 @@ main(int argc, char **argv)
 	bool cflag = false, aflag = false;
 	char *wflag = NULL;
 	struct confctl *cc;
-	struct confctl_var *filter = NULL;
+	struct confctl_var *filter = NULL, *merge = NULL;
 
 	while ((ch = getopt(argc, argv, "acw:")) != -1) {
 		switch (ch) {
@@ -95,7 +95,8 @@ main(int argc, char **argv)
 		else
 			confctl_print_lines(cc, stdout);
 	} else {
-		confctl_merge_line(cc, wflag);
+		confctl_var_from_line(&merge, wflag);
+		confctl_merge(cc, merge);
 #if 0
 		confctl_save(cc, argv[0]);
 #else
