@@ -54,7 +54,7 @@ main(int argc, char **argv)
 		errx(1, "-c and -w are mutually exclusive");
 	if (aflag && argc > 1)
 		errx(1, "-a and variable names are mutually exclusive");
-	if (!aflag && argc == 1)
+	if (!aflag && !wflag && argc == 1)
 		errx(1, "neither -a or variable names specified");
 
 	cc = confctl_load(argv[0]);
@@ -68,8 +68,12 @@ main(int argc, char **argv)
 		else
 			confctl_print_lines(cc, stdout);
 	} else {
-		confctl_parse_line(cc, wflag);
+		confctl_merge_line(cc, wflag);
+#if 0
 		confctl_save(cc, argv[0]);
+#else
+		confctl_print_c(cc, stdout);
+#endif
 	}
 
 	return (0);

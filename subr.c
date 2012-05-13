@@ -135,6 +135,17 @@ cv_new_value(struct confctl_var *parent, struct buf *name, struct buf *value)
 	return (cv);
 }
 
+
+static void
+cv_reparent(struct confctl_var *cv, struct confctl_var *parent)
+{
+
+	if (cv->cv_parent != NULL)
+		TAILQ_REMOVE(&cv->cv_parent->cv_vars, cv, cv_next);
+	cv->cv_parent = parent;
+	TAILQ_INSERT_TAIL(&parent->cv_vars, cv, cv_next);
+}
+
 static struct confctl *
 confctl_new(void)
 {
@@ -337,35 +348,80 @@ confctl_print_lines(struct confctl *cc, FILE *fp)
 }
 
 static struct confctl_var *
-cv_from_line(const char *line)
+cv_from_line(const char *line, bool want_value)
 {
 	struct confctl_var *cv, *parent = NULL, *root = NULL;
-	char *name, *str, *tofree;
+	char *name, *value, *next, *tofree;
 
-	str = tofree = strdup(line);
-	if (str == NULL)
+	next = tofree = strdup(line);
+	if (next == NULL)
 		err(1, "strdup");
 
-	while ((name = strsep(&str, ".")) != NULL) {
-		cv = cv_new(parent, buf_new_from_str(name));
+	while ((name = strsep(&next, ".")) != NULL) {
+		value = name;
+		name = strsep(&value, "=");
+		if (value != NULL) {
+			if (next != NULL)
+				errx(1, "trailing name (%s) after value (%s)", next, value);
+			cv = cv_new_value(parent, buf_new_from_str(name), buf_new_from_str(value));
+		} else
+			cv = cv_new(parent, buf_new_from_str(name));
 		parent = cv;
 		if (root == NULL)
 			root = parent;
 	}
 
-	/*
-	 * Last variable doesn't contain neither value nor subvariables.
-	 */
-	cv->cv_value = buf_new_from_str("kopytko");
+	if (want_value && cv->cv_value == NULL)
+		errx(1, "must specify a value");
+	if (!want_value && cv->cv_value != NULL)
+		errx(1, "must not specify a value");
 
 	free(tofree);
 
 	return (root);
 }
 
-void
-confctl_parse_line(struct confctl *cc, const char *line)
+static bool
+confctl_var_merge(struct confctl_var *cv, struct confctl_var *newcv)
 {
+	struct confctl_var *child;
+	bool done;
+
+	if (strcmp(cv->cv_name->b_buf, newcv->cv_name->b_buf) != 0)
+		return (false);
+
+	if (cv->cv_value != NULL) {
+		if (newcv->cv_value == NULL)
+			errx(1, "cannot add subvariable %s to variable %s", newcv->cv_name->b_buf, cv->cv_name->b_buf);
+		cv->cv_value = newcv->cv_value;
+		newcv->cv_value = NULL;
+		return (true);
+	}
+
+	TAILQ_FOREACH(child, &cv->cv_vars, cv_next) {
+		done = confctl_var_merge(child, TAILQ_FIRST(&newcv->cv_vars));
+		if (done)
+			return (true);
+	}
+
+	cv_reparent(TAILQ_FIRST(&newcv->cv_vars), cv);
+	return (true);
+}
+
+void
+confctl_merge_line(struct confctl *cc, const char *line)
+{
+	struct confctl_var *newcv, *cv;
+	bool done;
+
+	newcv = cv_from_line(line, true);
+	TAILQ_FOREACH(cv, &cc->cc_root->cv_vars, cv_next) {
+		done = confctl_var_merge(cv, newcv);
+		if (done)
+			return;
+	}
+	fprintf(stderr, "tld not found\n");
+	cv_reparent(newcv, cc->cc_root);
 }
 
 static void
@@ -390,7 +446,7 @@ confctl_filter_line(struct confctl *cc, const char *line)
 {
 	struct confctl_var *filter, *cv, *tmp;
 
-	filter = cv_from_line(line);
+	filter = cv_from_line(line, false);
 	TAILQ_FOREACH_SAFE(cv, &cc->cc_root->cv_vars, cv_next, tmp)
 		confctl_var_filter(cv, filter);
 }
