@@ -27,6 +27,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <err.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -262,29 +263,57 @@ confvar_load(const char *path)
 	return (cv);
 }
 
+static void
+remove_tmpfile(const char *tmppath)
+{
+	int error, saved_errno;
+
+	saved_errno = errno;
+	error = unlink(tmppath);
+	if (error != 0)
+		warn("unlink");
+	errno = saved_errno;
+}
+
 void
 confvar_save(struct confvar *cv, const char *path)
 {
 	FILE *fp;
-	int error;
+	int error, fd;
+	char *tmppath = NULL;
 
-	/*
-	 * XXX: Modifying in place.
-	 */
-
-	fp = fopen(path, "w");
-	if (fp == NULL)
-		err(1, "unable to open %s for writing", path);
+	asprintf(&tmppath, "%s.XXXXXXXXX", path);
+	if (tmppath == NULL)
+		err(1, "asprintf");
+	fd = mkstemp(tmppath);
+	if (fd < 0)
+		err(1, "cannot create temporary file %s", tmppath);
+	fp = fdopen(fd, "w");
+	if (fp == NULL) {
+		remove_tmpfile(tmppath);
+		err(1, "fdopen");
+	}
 	confvar_print_c(cv, fp);
 	error = fflush(fp);
-	if (error != 0)
+	if (error != 0) {
+		remove_tmpfile(tmppath);
 		err(1, "fflush");
-	error = fsync(fileno(fp));
-	if (error != 0)
+	}
+	error = fsync(fd);
+	if (error != 0) {
+		remove_tmpfile(tmppath);
 		err(1, "sync");
+	}
 	error = fclose(fp);
-	if (error != 0)
+	if (error != 0) {
+		remove_tmpfile(tmppath);
 		err(1, "fclose");
+	}
+	error = rename(tmppath, path);
+	if (error != 0) {
+		remove_tmpfile(tmppath);
+		err(1, "cannot replace %s", path);
+	}
 }
 
 static bool
