@@ -47,7 +47,7 @@ main(int argc, char **argv)
 {
 	int ch, i;
 	bool cflag = false, aflag = false, nflag = false;
-	struct confvar *root, *filter = NULL, *merge = NULL;
+	struct confvar *root, *cv, *filter = NULL, *merge = NULL;
 
 	while ((ch = getopt(argc, argv, "acnw:")) != -1) {
 		switch (ch) {
@@ -61,7 +61,8 @@ main(int argc, char **argv)
 				nflag = true;
 				break;
 			case 'w':
-				confctl_from_line(&merge, optarg);
+				cv = confctl_from_line(optarg);
+				confctl_merge(&merge, cv);
 				break;
 			case '?':
 			default:
@@ -91,8 +92,10 @@ main(int argc, char **argv)
 	root = confctl_load(argv[0]);
 	if (merge == NULL) {
 		if (!aflag) {
-			for (i = 1; i < argc; i++)
-				confctl_from_line(&filter, argv[i]);
+			for (i = 1; i < argc; i++) {
+				cv = confctl_from_line(argv[i]);
+				confctl_merge(&filter, cv);
+			}
 			confctl_filter(root, filter);
 		}
 		if (cflag)
@@ -100,7 +103,7 @@ main(int argc, char **argv)
 		else
 			confctl_print_lines(root, stdout, nflag);
 	} else {
-		confctl_merge(root, merge);
+		confctl_merge(&root, merge);
 #if 0
 		confctl_save(root, argv[0]);
 #else

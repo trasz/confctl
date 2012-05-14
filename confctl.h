@@ -31,11 +31,11 @@
 struct confvar;
 
 struct confvar	*confctl_load(const char *path);
+struct confvar	*confctl_from_line(const char *line);
 void		confctl_save(struct confvar *cv, const char *path);
 void		confctl_print_c(struct confvar *cv, FILE *fp);
 void		confctl_print_lines(struct confvar *cv, FILE *fp, bool values_only);
-void		confctl_merge(struct confvar *cv, struct confvar *merge);
+void		confctl_merge(struct confvar **cvp, struct confvar *merge);
 void		confctl_filter(struct confvar *cv, struct confvar *filter);
-void		confctl_from_line(struct confvar **cvp, const char *line);
 
 #endif /* !CONFCTL_H */

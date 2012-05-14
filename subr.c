@@ -371,8 +371,8 @@ confctl_print_lines(struct confvar *cv, FILE *fp, bool values_only)
 		cv_print_lines(child, fp, NULL, values_only);
 }
 
-static struct confvar *
-cv_from_line(const char *line)
+struct confvar *
+confctl_from_line(const char *line)
 {
 	struct confvar *cv, *parent, *root;
 	char *name, *value, *next, *tofree;
@@ -431,11 +431,14 @@ cv_merge(struct confvar *cv, struct confvar *newcv)
 }
 
 void
-confctl_merge(struct confvar *cv, struct confvar *merge)
+confctl_merge(struct confvar **cvp, struct confvar *merge)
 {
 	bool found;
 
-	found = cv_merge(cv, merge);
+	if (*cvp == NULL)
+		*cvp = cv_new(NULL, buf_new_from_str("HKEY_CLASSES_ROOT"));
+
+	found = cv_merge(*cvp, merge);
 	assert(found);
 }
 
@@ -456,16 +459,4 @@ confctl_filter(struct confvar *cv, struct confvar *filter)
 
 	TAILQ_FOREACH_SAFE(child, &cv->cv_children, cv_next, tmp)
 		confctl_filter(child, TAILQ_FIRST(&filter->cv_children));
-}
-
-void
-confctl_from_line(struct confvar **cvp, const char *line)
-{
-	struct confvar *newcv;
-
-	if (*cvp == NULL)
-		*cvp = cv_new(NULL, buf_new_from_str("HKEY_CLASSES_ROOT"));
-
-	newcv = cv_from_line(line);
-	confctl_merge(*cvp, newcv);
 }
