@@ -51,22 +51,22 @@ main(int argc, char **argv)
 
 	while ((ch = getopt(argc, argv, "acnw:")) != -1) {
 		switch (ch) {
-			case 'a':
-				aflag = true;
-				break;
-			case 'c':
-				cflag = true;
-				break;
-			case 'n':
-				nflag = true;
-				break;
-			case 'w':
-				cv = confvar_from_line(optarg);
-				confvar_merge(&merge, cv);
-				break;
-			case '?':
-			default:
-				usage();
+		case 'a':
+			aflag = true;
+			break;
+		case 'c':
+			cflag = true;
+			break;
+		case 'n':
+			nflag = true;
+			break;
+		case 'w':
+			cv = confvar_from_line(optarg);
+			confvar_merge(&merge, cv);
+			break;
+		case '?':
+		default:
+			usage();
 		}
 	}
 	argc -= optind;
