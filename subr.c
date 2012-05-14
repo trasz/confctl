@@ -406,25 +406,30 @@ cv_from_line(const char *line)
 static bool
 confctl_var_merge(struct confctl_var *cv, struct confctl_var *newcv)
 {
-	struct confctl_var *child;
-	bool done;
+	struct confctl_var *child, *newchild, *tmp, *newtmp;
+	bool found;
 
-	if (strcmp(cv->cv_name->b_buf, newcv->cv_name->b_buf) != 0)
+	if (strcmp(cv->cv_name->b_buf, newcv->cv_name->b_buf) != 0) {
 		return (false);
+	}
 
 	if (TAILQ_EMPTY(&newcv->cv_vars)) {
 		cv->cv_value = newcv->cv_value;
-		cv->cv_vars = newcv->cv_vars;
+		TAILQ_FOREACH_SAFE(newchild, &newcv->cv_vars, cv_next, newtmp)
+			cv_reparent(newchild, cv);
 		return (true);
 	}
 
-	TAILQ_FOREACH(child, &cv->cv_vars, cv_next) {
-		done = confctl_var_merge(child, TAILQ_FIRST(&newcv->cv_vars));
-		if (done)
-			return (true);
+	TAILQ_FOREACH_SAFE(newchild, &newcv->cv_vars, cv_next, newtmp) {
+		TAILQ_FOREACH_SAFE(child, &cv->cv_vars, cv_next, tmp) {
+			found = confctl_var_merge(child, newchild);
+			if (found)
+				break;
+		}
+		if (!found)
+			cv_reparent(newchild, cv);
 	}
 
-	cv_reparent(TAILQ_FIRST(&newcv->cv_vars), cv);
 	return (true);
 }
 
