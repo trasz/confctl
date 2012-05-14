@@ -121,6 +121,16 @@ cv_new(struct confvar *parent, struct buf *name)
 	return (cv);
 }
 
+static struct confvar *
+cv_new_root(void)
+{
+	struct confvar *cv;
+
+	cv = cv_new(NULL, buf_new_from_str("HKEY_CLASSES_ROOT"));
+
+	return (cv);
+}
+
 static void
 cv_delete_quick(struct confvar *cv)
 {
@@ -171,18 +181,8 @@ cv_reparent(struct confvar *cv, struct confvar *parent)
 	TAILQ_INSERT_TAIL(&parent->cv_children, cv, cv_next);
 }
 
-static struct confvar *
-confctl_new(void)
-{
-	struct confvar *cv;
-
-	cv = cv_new(NULL, buf_new_from_str("HKEY_CLASSES_ROOT"));
-
-	return (cv);
-}
-
 static struct buf *
-confctl_read_word(FILE *fp)
+cv_read_word(FILE *fp)
 {
 	int ch;
 	struct buf *b;
@@ -219,12 +219,12 @@ cv_load(struct confvar *parent, FILE *fp)
 	bool closing_bracket;
 	struct confvar *cv;
 
-	name = confctl_read_word(fp);
+	name = cv_read_word(fp);
 	if (name == NULL)
 		return (true);
 	if (strcmp(name->b_buf, "}") == 0)
 		return (true);
-	value = confctl_read_word(fp);
+	value = cv_read_word(fp);
 	if (value == NULL)
 		errx(1, "name without value at EOF");
 	if (strcmp(value->b_buf, "{") == 0) {
@@ -249,7 +249,7 @@ confctl_load(const char *path)
 	if (fp == NULL)
 		err(1, "unable to open %s", path);
 
-	cv = confctl_new();
+	cv = cv_new_root();
 	for (;;) {
 		if (feof(fp) != 0)
 			break;
@@ -381,7 +381,7 @@ confctl_from_line(const char *line)
 	if (next == NULL)
 		err(1, "strdup");
 
-	root = parent = cv_new(NULL, buf_new_from_str("HKEY_CLASSES_ROOT"));
+	root = parent = cv_new_root();
 
 	while ((name = strsep(&next, ".")) != NULL) {
 		value = name;
@@ -436,7 +436,7 @@ confctl_merge(struct confvar **cvp, struct confvar *merge)
 	bool found;
 
 	if (*cvp == NULL)
-		*cvp = cv_new(NULL, buf_new_from_str("HKEY_CLASSES_ROOT"));
+		*cvp = cv_new_root();
 
 	found = cv_merge(*cvp, merge);
 	assert(found);
