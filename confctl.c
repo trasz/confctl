@@ -47,8 +47,7 @@ main(int argc, char **argv)
 {
 	int ch, i;
 	bool cflag = false, aflag = false, nflag = false;
-	struct confctl *cc;
-	struct confctl_var *filter = NULL, *merge = NULL;
+	struct confvar *root, *filter = NULL, *merge = NULL;
 
 	while ((ch = getopt(argc, argv, "acnw:")) != -1) {
 		switch (ch) {
@@ -62,7 +61,7 @@ main(int argc, char **argv)
 				nflag = true;
 				break;
 			case 'w':
-				confctl_var_from_line(&merge, optarg);
+				confctl_from_line(&merge, optarg);
 				break;
 			case '?':
 			default:
@@ -89,23 +88,23 @@ main(int argc, char **argv)
 	if (!aflag && !merge && argc == 1)
 		errx(1, "neither -a or variable names specified");
 
-	cc = confctl_load(argv[0]);
+	root = confctl_load(argv[0]);
 	if (merge == NULL) {
 		if (!aflag) {
 			for (i = 1; i < argc; i++)
-				confctl_var_from_line(&filter, argv[i]);
-			confctl_filter(cc, filter);
+				confctl_from_line(&filter, argv[i]);
+			confctl_filter(root, filter);
 		}
 		if (cflag)
-			confctl_print_c(cc, stdout);
+			confctl_print_c(root, stdout);
 		else
-			confctl_print_lines(cc, stdout, nflag);
+			confctl_print_lines(root, stdout, nflag);
 	} else {
-		confctl_merge(cc, merge);
+		confctl_merge(root, merge);
 #if 0
-		confctl_save(cc, argv[0]);
+		confctl_save(root, argv[0]);
 #else
-		confctl_print_c(cc, stdout);
+		confctl_print_c(root, stdout);
 #endif
 	}
 

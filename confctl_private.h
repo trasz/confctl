@@ -34,16 +34,12 @@ struct buf {
 	size_t	b_len;
 };
 
-struct confctl_var {
-	TAILQ_ENTRY(confctl_var)	cv_next;
-	struct buf			*cv_name;
-	struct buf			*cv_value;
-	struct confctl_var		*cv_parent;
-	TAILQ_HEAD(, confctl_var)	cv_vars;
-};
-
-struct confctl {
-	struct confctl_var		*cc_root;
+struct confvar {
+	TAILQ_ENTRY(confvar)	cv_next;
+	struct buf		*cv_name;
+	struct buf		*cv_value;
+	struct confvar		*cv_parent;
+	TAILQ_HEAD(, confvar)	cv_children;
 };
 
 #endif /* !CONFCTL_PRIVATE_H */

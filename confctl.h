@@ -28,15 +28,14 @@
 
 #include <stdio.h>
 
-struct confctl;
-struct confctl_var;
+struct confvar;
 
-struct confctl	*confctl_load(const char *path);
-void		confctl_save(struct confctl *cc, const char *path);
-void		confctl_print_c(struct confctl *confctl, FILE *fp);
-void		confctl_print_lines(struct confctl *confctl, FILE *fp, bool values_only);
-void		confctl_merge(struct confctl *confctl, struct confctl_var *merge);
-void		confctl_filter(struct confctl *confctl, struct confctl_var *filter);
-void		confctl_var_from_line(struct confctl_var **cvp, const char *line);
+struct confvar	*confctl_load(const char *path);
+void		confctl_save(struct confvar *cv, const char *path);
+void		confctl_print_c(struct confvar *cv, FILE *fp);
+void		confctl_print_lines(struct confvar *cv, FILE *fp, bool values_only);
+void		confctl_merge(struct confvar *cv, struct confvar *merge);
+void		confctl_filter(struct confvar *cv, struct confvar *filter);
+void		confctl_from_line(struct confvar **cvp, const char *line);
 
 #endif /* !CONFCTL_H */
