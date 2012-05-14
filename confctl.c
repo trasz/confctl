@@ -36,8 +36,8 @@
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: confctl [-c] config-path [name...]\n");
-	fprintf(stderr, "       confctl [-ac] config-path\n");
+	fprintf(stderr, "usage: confctl [-cn] config-path [name...]\n");
+	fprintf(stderr, "       confctl [-acn] config-path\n");
 	fprintf(stderr, "       confctl -w name=value config-path\n");
 	exit(1);
 }
