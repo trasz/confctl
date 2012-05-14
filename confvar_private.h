@@ -39,6 +39,7 @@ struct confvar {
 	struct buf		*cv_name;
 	struct buf		*cv_value;
 	struct confvar		*cv_parent;
+	bool			cv_filtered_out;
 	TAILQ_HEAD(, confvar)	cv_children;
 };
 

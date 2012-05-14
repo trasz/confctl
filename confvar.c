@@ -131,6 +131,7 @@ cv_new_root(void)
 	return (cv);
 }
 
+#ifdef notused
 static void
 cv_delete_quick(struct confvar *cv)
 {
@@ -158,6 +159,7 @@ cv_delete(struct confvar *cv)
 		TAILQ_REMOVE(&cv->cv_parent->cv_children, cv, cv_next);
 	cv_delete_quick(cv);
 }
+#endif
 
 static struct confvar *
 cv_new_value(struct confvar *parent, struct buf *name, struct buf *value)
@@ -169,7 +171,6 @@ cv_new_value(struct confvar *parent, struct buf *name, struct buf *value)
 
 	return (cv);
 }
-
 
 static void
 cv_reparent(struct confvar *cv, struct confvar *parent)
@@ -318,6 +319,9 @@ cv_print_c(struct confvar *cv, FILE *fp, int indent)
 {
 	struct confvar *child;
 
+	if (cv->cv_filtered_out)
+		return;
+
 	if (cv_is_container(cv)) {
 		fprintf(fp, "%*s%s {\n", indent, "", cv_name(cv));
 		TAILQ_FOREACH(child, &cv->cv_children, cv_next)
@@ -333,6 +337,9 @@ cv_print_lines(struct confvar *cv, FILE *fp, const char *prefix, bool values_onl
 {
 	struct confvar *child;
 	char *newprefix;
+
+	if (cv->cv_filtered_out)
+		return;
 
 	if (cv_is_container(cv)) {
 		if (prefix != NULL)
@@ -442,21 +449,42 @@ confvar_merge(struct confvar **cvp, struct confvar *merge)
 	assert(found);
 }
 
-void
-confvar_filter(struct confvar *cv, struct confvar *filter)
+static bool
+cv_filter(struct confvar *cv, struct confvar *filter)
 {
-	struct confvar *child, *tmp;
+	struct confvar *child, *filterchild;
+	bool found;
 
-	if (filter == NULL)
-		return;
 	if (filter->cv_value != NULL)
 		errx(1, "filter must not specify a value");
 
-	if (strcmp(filter->cv_name->b_buf, cv->cv_name->b_buf) != 0) {
-		cv_delete(cv);
-		return;
+	if (strcmp(filter->cv_name->b_buf, cv->cv_name->b_buf) != 0)
+		return (false);
+
+	TAILQ_FOREACH(child, &cv->cv_children, cv_next) {
+		if (TAILQ_EMPTY(&filter->cv_children)) {
+			found = true;
+		} else {
+			found = false;
+			TAILQ_FOREACH(filterchild, &filter->cv_children, cv_next) {
+				if (cv_filter(child, filterchild))
+					found = true;
+			}
+		}
+		if (found)
+			child->cv_filtered_out = false;
+		else
+			child->cv_filtered_out = true;
 	}
 
-	TAILQ_FOREACH_SAFE(child, &cv->cv_children, cv_next, tmp)
-		confvar_filter(child, TAILQ_FIRST(&filter->cv_children));
+	return (true);
+}
+
+void
+confvar_filter(struct confvar *cv, struct confvar *filter)
+{
+	bool found;
+
+	found = cv_filter(cv, filter);
+	assert(found);
 }
