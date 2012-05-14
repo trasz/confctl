@@ -188,6 +188,7 @@ cv_read_word(FILE *fp)
 {
 	int ch;
 	struct buf *b;
+	bool quoted = false, escaped = false;
 
 	b = buf_new();
 
@@ -197,7 +198,18 @@ cv_read_word(FILE *fp)
 			break;
 		if (ferror(fp) != 0)
 			err(1, "fgetc");
-		if (isspace(ch)) {
+		if (escaped) {
+			buf_append(b, ch);
+			escaped = false;
+			continue;
+		}
+		if (ch == '\\') {
+			escaped = true;
+			continue;
+		}
+		if (ch == '"')
+			quoted = !quoted;
+		if (!quoted && isspace(ch)) {
 			if (b->b_len == 0)
 				continue;
 			break;
