@@ -31,7 +31,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "confctl.h"
+#include "confvar.h"
 
 static void
 usage(void)
@@ -61,8 +61,8 @@ main(int argc, char **argv)
 				nflag = true;
 				break;
 			case 'w':
-				cv = confctl_from_line(optarg);
-				confctl_merge(&merge, cv);
+				cv = confvar_from_line(optarg);
+				confvar_merge(&merge, cv);
 				break;
 			case '?':
 			default:
@@ -89,25 +89,25 @@ main(int argc, char **argv)
 	if (!aflag && !merge && argc == 1)
 		errx(1, "neither -a or variable names specified");
 
-	root = confctl_load(argv[0]);
+	root = confvar_load(argv[0]);
 	if (merge == NULL) {
 		if (!aflag) {
 			for (i = 1; i < argc; i++) {
-				cv = confctl_from_line(argv[i]);
-				confctl_merge(&filter, cv);
+				cv = confvar_from_line(argv[i]);
+				confvar_merge(&filter, cv);
 			}
-			confctl_filter(root, filter);
+			confvar_filter(root, filter);
 		}
 		if (cflag)
-			confctl_print_c(root, stdout);
+			confvar_print_c(root, stdout);
 		else
-			confctl_print_lines(root, stdout, nflag);
+			confvar_print_lines(root, stdout, nflag);
 	} else {
-		confctl_merge(&root, merge);
+		confvar_merge(&root, merge);
 #if 0
-		confctl_save(root, argv[0]);
+		confvar_save(root, argv[0]);
 #else
-		confctl_print_c(root, stdout);
+		confvar_print_c(root, stdout);
 #endif
 	}
 

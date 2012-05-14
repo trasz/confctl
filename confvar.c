@@ -33,8 +33,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "confctl.h"
-#include "confctl_private.h"
+#include "confvar.h"
+#include "confvar_private.h"
 
 static struct buf *
 buf_new(void)
@@ -240,7 +240,7 @@ cv_load(struct confvar *parent, FILE *fp)
 }
 
 struct confvar *
-confctl_load(const char *path)
+confvar_load(const char *path)
 {
 	struct confvar *cv;
 	FILE *fp;
@@ -262,7 +262,7 @@ confctl_load(const char *path)
 }
 
 void
-confctl_save(struct confvar *cv, const char *path)
+confvar_save(struct confvar *cv, const char *path)
 {
 	FILE *fp;
 	int error;
@@ -274,7 +274,7 @@ confctl_save(struct confvar *cv, const char *path)
 	fp = fopen(path, "w");
 	if (fp == NULL)
 		err(1, "unable to open %s for writing", path);
-	confctl_print_c(cv, fp);
+	confvar_print_c(cv, fp);
 	error = fflush(fp);
 	if (error != 0)
 		err(1, "fflush");
@@ -354,7 +354,7 @@ cv_print_lines(struct confvar *cv, FILE *fp, const char *prefix, bool values_onl
 }
 
 void
-confctl_print_c(struct confvar *cv, FILE *fp)
+confvar_print_c(struct confvar *cv, FILE *fp)
 {
 	struct confvar *child;
 
@@ -363,7 +363,7 @@ confctl_print_c(struct confvar *cv, FILE *fp)
 }
 
 void
-confctl_print_lines(struct confvar *cv, FILE *fp, bool values_only)
+confvar_print_lines(struct confvar *cv, FILE *fp, bool values_only)
 {
 	struct confvar *child;
 
@@ -372,7 +372,7 @@ confctl_print_lines(struct confvar *cv, FILE *fp, bool values_only)
 }
 
 struct confvar *
-confctl_from_line(const char *line)
+confvar_from_line(const char *line)
 {
 	struct confvar *cv, *parent, *root;
 	char *name, *value, *next, *tofree;
@@ -431,7 +431,7 @@ cv_merge(struct confvar *cv, struct confvar *newcv)
 }
 
 void
-confctl_merge(struct confvar **cvp, struct confvar *merge)
+confvar_merge(struct confvar **cvp, struct confvar *merge)
 {
 	bool found;
 
@@ -443,7 +443,7 @@ confctl_merge(struct confvar **cvp, struct confvar *merge)
 }
 
 void
-confctl_filter(struct confvar *cv, struct confvar *filter)
+confvar_filter(struct confvar *cv, struct confvar *filter)
 {
 	struct confvar *child, *tmp;
 
@@ -458,5 +458,5 @@ confctl_filter(struct confvar *cv, struct confvar *filter)
 	}
 
 	TAILQ_FOREACH_SAFE(child, &cv->cv_children, cv_next, tmp)
-		confctl_filter(child, TAILQ_FIRST(&filter->cv_children));
+		confvar_filter(child, TAILQ_FIRST(&filter->cv_children));
 }

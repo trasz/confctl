@@ -23,19 +23,19 @@
  * SUCH DAMAGE.
  */
 
-#ifndef CONFCTL_H
-#define	CONFCTL_H
+#ifndef CONFVAR_H
+#define	CONFVAR_H
 
 #include <stdio.h>
 
 struct confvar;
 
-struct confvar	*confctl_load(const char *path);
-struct confvar	*confctl_from_line(const char *line);
-void		confctl_save(struct confvar *cv, const char *path);
-void		confctl_print_c(struct confvar *cv, FILE *fp);
-void		confctl_print_lines(struct confvar *cv, FILE *fp, bool values_only);
-void		confctl_merge(struct confvar **cvp, struct confvar *merge);
-void		confctl_filter(struct confvar *cv, struct confvar *filter);
+struct confvar	*confvar_load(const char *path);
+struct confvar	*confvar_from_line(const char *line);
+void		confvar_save(struct confvar *cv, const char *path);
+void		confvar_print_c(struct confvar *cv, FILE *fp);
+void		confvar_print_lines(struct confvar *cv, FILE *fp, bool values_only);
+void		confvar_merge(struct confvar **cvp, struct confvar *merge);
+void		confvar_filter(struct confvar *cv, struct confvar *filter);
 
-#endif /* !CONFCTL_H */
+#endif /* !CONFVAR_H */
