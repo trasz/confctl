@@ -48,27 +48,13 @@ buf_new(void)
 	return (b);
 }
 
-#if 0
-static void
-buf_delete(struct buf *b)
-{
-
-	if (b->b_buf != NULL)
-		free(b->b_buf);
-#if 1
-	memset(b, 42, sizeof(*b)); /* XXX: For debugging. */
-#endif
-	free(b);
-}
-#endif
-
 static void
 buf_append(struct buf *b, char ch)
 {
 
 	if (b->b_len + 1 >= b->b_allocated) {
 		if (b->b_allocated == 0)
-			b->b_allocated = 1; /* XXX */
+			b->b_allocated = 16;
 		else
 			b->b_allocated *= 4;
 		b->b_buf = realloc(b->b_buf, b->b_allocated);
@@ -133,36 +119,6 @@ cv_new_root(void)
 
 	return (cv);
 }
-
-#ifdef notused
-static void
-cv_delete_quick(struct confvar *cv)
-{
-	struct confvar *child, *tmp;
-
-	TAILQ_FOREACH_SAFE(child, &cv->cv_children, cv_next, tmp)
-		cv_delete_quick(child);
-
-	buf_delete(cv->cv_name);
-	if (cv->cv_value != NULL)
-		buf_delete(cv->cv_value);
-
-#if 1
-	memset(cv, 1984, sizeof(*cv)); /* XXX: For debugging. */
-#endif
-
-	free(cv);
-}
-
-static void
-cv_delete(struct confvar *cv)
-{
-
-	if (cv->cv_parent != NULL)
-		TAILQ_REMOVE(&cv->cv_parent->cv_children, cv, cv_next);
-	cv_delete_quick(cv);
-}
-#endif
 
 static struct confvar *
 cv_new_value(struct confvar *parent, struct buf *name, struct buf *value)
@@ -555,9 +511,8 @@ cv_merge(struct confvar *cv, struct confvar *newcv)
 	struct confvar *child, *newchild, *tmp, *newtmp;
 	bool found;
 
-	if (strcmp(cv->cv_name->b_buf, newcv->cv_name->b_buf) != 0) {
+	if (strcmp(cv->cv_name->b_buf, newcv->cv_name->b_buf) != 0)
 		return (false);
-	}
 
 	if (TAILQ_EMPTY(&newcv->cv_children)) {
 		cv->cv_value = newcv->cv_value;
