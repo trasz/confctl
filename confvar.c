@@ -184,7 +184,59 @@ cv_reparent(struct confvar *cv, struct confvar *parent)
 }
 
 static struct buf *
-cv_read_word(FILE *fp)
+buf_read_junk(FILE *fp, bool middle)
+{
+	int ch;
+	struct buf *b;
+	bool comment = false;
+
+	b = buf_new();
+
+	for (;;) {
+		ch = getc(fp);
+		if (feof(fp) != 0)
+			break;
+		if (ferror(fp) != 0)
+			err(1, "getc");
+		if (comment) {
+			if (ch == '\n' || ch == '\r')
+				comment = false;
+			buf_append(b, ch);
+			continue;
+		}
+		if (middle && (ch == '#' || ch == '\n' || ch == '\r' || ch == ';')) {
+			ch = ungetc(ch, fp);
+			if (ch == EOF)
+				err(1, "ungetc");
+			break;
+		}
+		if (ch == '#') {
+			comment = true;
+			buf_append(b, ch);
+			continue;
+		}
+		if (isspace(ch) || ch == ';') {
+			buf_append(b, ch);
+			continue;
+		}
+		ch = ungetc(ch, fp);
+		if (ch == EOF)
+			err(1, "ungetc");
+		break;
+	}
+
+	if (b->b_len == 0) {
+		buf_delete(b);
+		fprintf(stderr, "null junk\n");
+		return (NULL);
+	}
+	buf_finish(b);
+	fprintf(stderr, "junk '%s'\n", b->b_buf);
+	return (b);
+}
+
+static struct buf *
+buf_read_name(FILE *fp)
 {
 	int ch;
 	struct buf *b;
@@ -193,11 +245,11 @@ cv_read_word(FILE *fp)
 	b = buf_new();
 
 	for (;;) {
-		ch = fgetc(fp);
+		ch = getc(fp);
 		if (feof(fp) != 0)
 			break;
 		if (ferror(fp) != 0)
-			err(1, "fgetc");
+			err(1, "getc");
 		if (escaped) {
 			buf_append(b, ch);
 			escaped = false;
@@ -209,9 +261,14 @@ cv_read_word(FILE *fp)
 		}
 		if (ch == '"')
 			quoted = !quoted;
-		if (!quoted && isspace(ch)) {
-			if (b->b_len == 0)
-				continue;
+		if (quoted) {
+			buf_append(b, ch);
+			continue;
+		}
+		if (isspace(ch) || ch == '#' || ch == ';' || ch == '{' || ch == '}') {
+			ch = ungetc(ch, fp);
+			if (ch == EOF)
+				err(1, "ungetc");
 			break;
 		}
 		buf_append(b, ch);
@@ -219,37 +276,96 @@ cv_read_word(FILE *fp)
 
 	if (b->b_len == 0) {
 		buf_delete(b);
+		fprintf(stderr, "null name\n");
 		return (NULL);
 	}
-
 	buf_finish(b);
+	fprintf(stderr, "name '%s'\n", b->b_buf);
+	return (b);
+}
+
+static struct buf *
+buf_read_value(FILE *fp)
+{
+	int ch;
+	struct buf *b;
+	bool quoted = false, escaped = false;
+
+	b = buf_new();
+
+	for (;;) {
+		ch = getc(fp);
+		if (feof(fp) != 0)
+			break;
+		if (ferror(fp) != 0)
+			err(1, "getc");
+		if (escaped) {
+			buf_append(b, ch);
+			escaped = false;
+			continue;
+		}
+		if (ch == '\\') {
+			escaped = true;
+			continue;
+		}
+		if (ch == '"')
+			quoted = !quoted;
+		if (quoted) {
+			buf_append(b, ch);
+			continue;
+		}
+		if ((ch == '{' || ch == '}') && b->b_len == 0) {
+			buf_append(b, ch);
+			break;
+		}
+		if (ch == '\n' || ch == '\r' || ch == '#' || ch == ';' || ch == '{' || ch == '}') {
+			ch = ungetc(ch, fp);
+			if (ch == EOF)
+				err(1, "ungetc");
+			break;
+		}
+		buf_append(b, ch);
+	}
+
+	if (b->b_len == 0) {
+		buf_delete(b);
+		fprintf(stderr, "null value\n");
+		return (NULL);
+	}
+	buf_finish(b);
+	fprintf(stderr, "value '%s'\n", b->b_buf);
 	return (b);
 }
 
 static bool
 cv_load(struct confvar *parent, FILE *fp)
 {
-	struct buf *name, *value;
+	struct buf *before, *name, *middle, *value, *after;
 	bool closing_bracket;
 	struct confvar *cv;
 
-	name = cv_read_word(fp);
-	if (name == NULL)
-		return (true);
-	if (strcmp(name->b_buf, "}") == 0)
-		return (true);
-	value = cv_read_word(fp);
-	if (value == NULL)
-		errx(1, "name without value at EOF");
-	if (strcmp(value->b_buf, "{") == 0) {
-		cv = cv_new(parent, name);
-		for (;;) {
-			closing_bracket = cv_load(cv, fp);
-			if (closing_bracket)
-				break;
-		}
+	before = buf_read_junk(fp, false);
+	name = buf_read_name(fp);
+	middle = buf_read_junk(fp, true);
+	value = buf_read_value(fp);
+	after = buf_read_junk(fp, false);
+
+	if (value != NULL) {
+		if (strcmp(value->b_buf, "}") == 0)
+			return (true);
+
+		if (strcmp(value->b_buf, "{") == 0) {
+			cv = cv_new(parent, name);
+			for (;;) {
+				closing_bracket = cv_load(cv, fp);
+				if (closing_bracket)
+					break;
+			}
+		} else
+			cv_new_value(parent, name, value);
 	} else
-		cv_new_value(parent, name, value);
+		cv_new_value(parent, name, buf_new_from_str(""));
+
 	return (false);
 }
 
@@ -268,7 +384,7 @@ confvar_load(const char *path)
 		if (feof(fp) != 0)
 			break;
 		if (ferror(fp) != 0)
-			err(1, "fgetc");
+			err(1, "getc");
 		cv_load(cv, fp);
 	}
 
