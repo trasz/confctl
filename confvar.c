@@ -86,6 +86,21 @@ buf_new_from_str(const char *str)
 	return (b);
 }
 
+static void
+buf_print(struct buf *b, FILE *fp)
+{
+	size_t written;
+
+	if (b == NULL)
+		return;
+	assert(b->b_len >= 1);
+	if (b->b_len == 1)
+		return;
+	written = fwrite(b->b_buf, b->b_len - 1, 1, fp);
+	if (written != 1)
+		err(1, "fwrite");
+}
+
 static struct confvar *
 cv_new(struct confvar *parent, struct buf *name)
 {
@@ -126,7 +141,9 @@ cv_new_value(struct confvar *parent, struct buf *name, struct buf *value)
 	struct confvar *cv;
 
 	cv = cv_new(parent, name);
+	cv->cv_middle = buf_new_from_str(" ");
 	cv->cv_value = value;
+	cv->cv_after = buf_new_from_str("\n");
 
 	return (cv);
 }
@@ -294,15 +311,15 @@ cv_load(struct confvar *parent, FILE *fp)
 	if (strcmp(value->b_buf, "}") == 0)
 		return (true);
 
+	cv = cv_new(parent, name);
 	if (strcmp(value->b_buf, "{") == 0) {
-		cv = cv_new(parent, name);
 		for (;;) {
 			closing_bracket = cv_load(cv, fp);
 			if (closing_bracket)
 				break;
 		}
 	} else
-		cv = cv_new_value(parent, name, value);
+		cv->cv_value = value;
 
 	after = buf_read_junk(fp, false);
 
@@ -423,13 +440,19 @@ cv_print_c(struct confvar *cv, FILE *fp)
 	if (cv->cv_filtered_out)
 		return;
 
+	buf_print(cv->cv_before, fp);
+	buf_print(cv->cv_name, fp);
+	buf_print(cv->cv_middle, fp);
+
 	if (cv_is_container(cv)) {
-		fprintf(fp, "%s%s%s{", cv->cv_before->b_buf, cv->cv_name->b_buf, cv->cv_middle->b_buf);
+		fprintf(fp, "{");
 		TAILQ_FOREACH(child, &cv->cv_children, cv_next)
 			cv_print_c(child, fp);
-		fprintf(fp, "}%s", cv->cv_after->b_buf);
+		fprintf(fp, "}");
 	} else
-		fprintf(fp, "%s%s%s%s%s", cv->cv_before->b_buf, cv->cv_name->b_buf, cv->cv_middle->b_buf, cv->cv_value->b_buf, cv->cv_after->b_buf);
+		buf_print(cv->cv_value, fp);
+
+	buf_print(cv->cv_after, fp);
 }
 
 static void
