@@ -1,5 +1,7 @@
 Things to do before calling it done:
 
+ - When adding new values, write them with correct indentation
+
  - Handle escaping and quoting in printing routines
 
  - Handle escaping and quoting in line parser
