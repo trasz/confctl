@@ -209,6 +209,7 @@ buf_read_name(FILE *fp)
 		}
 		if (ch == '\\') {
 			escaped = true;
+			buf_append(b, ch);
 			continue;
 		}
 		if (ch == '"')
@@ -252,6 +253,7 @@ buf_read_value(FILE *fp)
 		}
 		if (ch == '\\') {
 			escaped = true;
+			buf_append(b, ch);
 			continue;
 		}
 		if (ch == '"')
