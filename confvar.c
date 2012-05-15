@@ -466,7 +466,7 @@ cv_print_c(struct confvar *cv, FILE *fp)
 		return;
 
 	if (cv_is_container(cv)) {
-		fprintf(fp, "%s%s%s {\n", cv->cv_before->b_buf, cv->cv_name->b_buf, cv->cv_middle->b_buf);
+		fprintf(fp, "%s%s%s{", cv->cv_before->b_buf, cv->cv_name->b_buf, cv->cv_middle->b_buf);
 		TAILQ_FOREACH(child, &cv->cv_children, cv_next)
 			cv_print_c(child, fp);
 		fprintf(fp, "}%s", cv->cv_after->b_buf);
