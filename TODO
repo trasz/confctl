@@ -1,7 +1,5 @@
 Things to do before calling it done:
 
- - Preserve comments
-
  - Handle escaping and quoting in printing routines
 
  - Handle escaping and quoting in line parser
