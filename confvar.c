@@ -652,7 +652,7 @@ cv_reindent(struct confvar *cv)
 		b = buf_get_indent(cv->cv_parent);
 		if (b == NULL)
 			b = buf_new_from_str("\n");
-		else {
+		if (cv->cv_parent->cv_parent != NULL) {
 			buf_append(b, '\t');
 			buf_finish(b);
 		}
