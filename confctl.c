@@ -81,8 +81,6 @@ main(int argc, char **argv)
 		errx(1, "-w and variable names are mutually exclusive");
 	if (aflag && merge)
 		errx(1, "-a and -w are mutually exclusive");
-	if (cflag && merge)
-		errx(1, "-c and -w are mutually exclusive");
 	if (nflag && merge)
 		errx(1, "-n and -w are mutually exclusive");
 	if (Iflag && !merge)
@@ -109,11 +107,10 @@ main(int argc, char **argv)
 			confvar_print_lines(root, stdout, nflag);
 	} else {
 		confvar_merge(&root, merge);
-#if 1
-		confvar_save(root, argv[0], Iflag);
-#else
-		confvar_print_c(root, stdout);
-#endif
+		if (cflag)
+			confvar_print_c(root, stdout);
+		else
+			confvar_save(root, argv[0], Iflag);
 	}
 
 	return (0);
