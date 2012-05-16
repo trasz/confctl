@@ -661,7 +661,10 @@ cv_reindent(struct confvar *cv)
 
 	if (cv_is_container(cv)) {
 		cv->cv_middle = buf_new_from_str(" {");
-		cv->cv_after = buf_new_from_str("}");
+		cv->cv_after = buf_new_from_str(cv->cv_before->b_buf);
+		buf_append(cv->cv_after, '}');
+		buf_finish(cv->cv_after);
+
 		TAILQ_FOREACH(child, &cv->cv_children, cv_next)
 			cv_reindent(child);
 	}
