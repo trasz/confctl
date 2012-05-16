@@ -1,7 +1,5 @@
 Things to do before calling it done:
 
- - When adding new values, write them with correct indentation
-
  - Handle escaping and quoting in printing routines
 
  - Handle escaping and quoting in line parser
@@ -9,8 +7,6 @@ Things to do before calling it done:
  - "-I" option to force in-line rewriting
 
  - Handle duplicates ('1 { some var } 2 { yadda yadda } 1 { some other var }')
-
- - Due to the way 'junk' gets stored, this: 'whatever { \n }' will always get converted to this: 'whatever {}'
 
  - Support syntax like this: 'whatever "name" { some stuff }'
 

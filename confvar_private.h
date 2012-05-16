@@ -43,7 +43,7 @@ struct confvar {
 	struct buf		*cv_after;
 	struct confvar		*cv_parent;
 	bool			cv_filtered_out;
-	TAILQ_HEAD(, confvar)	cv_children;
+	TAILQ_HEAD(confvar_head, confvar)	cv_children;
 };
 
 #endif /* !CONFCTL_PRIVATE_H */

@@ -143,23 +143,12 @@ cv_new_value(struct confvar *parent, struct buf *name, struct buf *value)
 	cv = cv_new(parent, name);
 	cv->cv_middle = buf_new_from_str(" ");
 	cv->cv_value = value;
-	cv->cv_after = buf_new_from_str("\n");
 
 	return (cv);
 }
 
-static void
-cv_reparent(struct confvar *cv, struct confvar *parent)
-{
-
-	if (cv->cv_parent != NULL)
-		TAILQ_REMOVE(&cv->cv_parent->cv_children, cv, cv_next);
-	cv->cv_parent = parent;
-	TAILQ_INSERT_TAIL(&parent->cv_children, cv, cv_next);
-}
-
 static struct buf *
-buf_read_junk(FILE *fp, bool middle)
+buf_read_before(FILE *fp)
 {
 	int ch;
 	struct buf *b;
@@ -179,16 +168,19 @@ buf_read_junk(FILE *fp, bool middle)
 			buf_append(b, ch);
 			continue;
 		}
-		if (middle && (ch == '#' || ch == '\n' || ch == '\r' || ch == ';')) {
-			ch = ungetc(ch, fp);
-			if (ch == EOF)
-				err(1, "ungetc");
-			break;
-		}
 		if (ch == '#') {
 			comment = true;
 			buf_append(b, ch);
 			continue;
+		}
+		/*
+		 * This is somewhat tricky - this piece of code is also used
+		 * to parse junk that will become cv_after of the parent
+		 * variable.
+		 */
+		if (ch == '}') {
+			buf_append(b, ch);
+			break;
 		}
 		if (isspace(ch) || ch == ';') {
 			buf_append(b, ch);
@@ -200,9 +192,10 @@ buf_read_junk(FILE *fp, bool middle)
 		break;
 	}
 	buf_finish(b);
-	//fprintf(stderr, "junk '%s'\n", b->b_buf);
+	//fprintf(stderr, "before '%s'\n", b->b_buf);
 	return (b);
 }
+
 
 static struct buf *
 buf_read_name(FILE *fp)
@@ -249,6 +242,59 @@ buf_read_name(FILE *fp)
 }
 
 static struct buf *
+buf_read_middle(FILE *fp, bool *opening_bracket)
+{
+	int ch;
+	struct buf *b;
+	bool escaped;
+
+	*opening_bracket = false;
+
+	b = buf_new();
+
+	for (;;) {
+		ch = getc(fp);
+		if (feof(fp) != 0)
+			break;
+		if (ferror(fp) != 0)
+			err(1, "getc");
+		if (ch == '\\') {
+			escaped = true;
+			buf_append(b, ch);
+			continue;
+		}
+		if (escaped && (ch == '\n' || ch == '\r')) {
+			escaped = false;
+			buf_append(b, ch);
+			continue;
+		}
+		escaped = false;
+		if (ch == '\n' || ch == '\r' || ch == '#' || ch == ';') {
+			ch = ungetc(ch, fp);
+			if (ch == EOF)
+				err(1, "ungetc");
+			break;
+		}
+		if (ch == '{') {
+			*opening_bracket = true;
+			buf_append(b, ch);
+			break;
+		}
+		if (isspace(ch)) {
+			buf_append(b, ch);
+			continue;
+		}
+		ch = ungetc(ch, fp);
+		if (ch == EOF)
+			err(1, "ungetc");
+		break;
+	}
+	buf_finish(b);
+	//fprintf(stderr, "middle '%s'\n", b->b_buf);
+	return (b);
+}
+
+static struct buf *
 buf_read_value(FILE *fp)
 {
 	int ch;
@@ -279,10 +325,6 @@ buf_read_value(FILE *fp)
 			buf_append(b, ch);
 			continue;
 		}
-		if ((ch == '{' || ch == '}') && b->b_len == 0) {
-			buf_append(b, ch);
-			break;
-		}
 		if (ch == '\n' || ch == '\r' || ch == '#' || ch == ';' || ch == '{' || ch == '}') {
 			ch = ungetc(ch, fp);
 			if (ch == EOF)
@@ -296,36 +338,83 @@ buf_read_value(FILE *fp)
 	return (b);
 }
 
+static struct buf *
+buf_read_after(FILE *fp)
+{
+	int ch;
+	struct buf *b;
+	bool comment = false;
+
+	b = buf_new();
+
+	for (;;) {
+		ch = getc(fp);
+		if (feof(fp) != 0)
+			break;
+		if (ferror(fp) != 0)
+			err(1, "getc");
+		if (ch == '\n' || ch == '\r') {
+			ch = ungetc(ch, fp);
+			if (ch == EOF)
+				err(1, "ungetc");
+			break;
+		}
+		if (comment) {
+			buf_append(b, ch);
+			continue;
+		}
+		if (ch == '#') {
+			comment = true;
+			buf_append(b, ch);
+			continue;
+		}
+		if (isspace(ch) || ch == ';') {
+			buf_append(b, ch);
+			continue;
+		}
+		ch = ungetc(ch, fp);
+		if (ch == EOF)
+			err(1, "ungetc");
+		break;
+	}
+	buf_finish(b);
+	//fprintf(stderr, "after '%s'\n", b->b_buf);
+	return (b);
+}
+
 static bool
 cv_load(struct confvar *parent, FILE *fp)
 {
 	struct buf *before, *name, *middle, *value, *after;
-	bool closing_bracket;
+	bool closing_bracket, opening_bracket;
 	struct confvar *cv;
 
-	before = buf_read_junk(fp, false);
+	before = buf_read_before(fp);
 	name = buf_read_name(fp);
-	middle = buf_read_junk(fp, true);
-	value = buf_read_value(fp);
 
-	if (strcmp(value->b_buf, "}") == 0)
+	if (name->b_len == 1) {
+		parent->cv_after = before;
 		return (true);
+	}
+
+	middle = buf_read_middle(fp, &opening_bracket);
 
 	cv = cv_new(parent, name);
-	if (strcmp(value->b_buf, "{") == 0) {
+	if (opening_bracket) {
 		for (;;) {
 			closing_bracket = cv_load(cv, fp);
 			if (closing_bracket)
 				break;
 		}
-	} else
+	} else {
+		value = buf_read_value(fp);
 		cv->cv_value = value;
-
-	after = buf_read_junk(fp, false);
+		after = buf_read_after(fp);
+		cv->cv_after = after;
+	}
 
 	cv->cv_before = before;
 	cv->cv_middle = middle;
-	cv->cv_after = after;
 
 	return (false);
 }
@@ -445,10 +534,8 @@ cv_print_c(struct confvar *cv, FILE *fp)
 	buf_print(cv->cv_middle, fp);
 
 	if (cv_is_container(cv)) {
-		fprintf(fp, "{");
 		TAILQ_FOREACH(child, &cv->cv_children, cv_next)
 			cv_print_c(child, fp);
-		fprintf(fp, "}");
 	} else
 		buf_print(cv->cv_value, fp);
 
@@ -490,6 +577,7 @@ confvar_print_c(struct confvar *cv, FILE *fp)
 
 	TAILQ_FOREACH(child, &cv->cv_children, cv_next)
 		cv_print_c(child, fp);
+	buf_print(cv->cv_after, fp);
 }
 
 void
@@ -528,6 +616,55 @@ confvar_from_line(const char *line)
 	free(tofree);
 
 	return (root);
+}
+
+static struct buf *
+buf_get_indent(struct confvar *cv)
+{
+	struct buf *b;
+	int i;
+
+	b = cv->cv_before;
+	if (b == NULL || b->b_len <= 2)
+		return (NULL);
+
+	for (i = b->b_len - 1; i >= 1; i--) {
+		if (b->b_buf[i] == '\n' || b->b_buf[i] == '\r')
+			break;
+	}
+
+	b = buf_new_from_str(b->b_buf + i);
+
+	return (b);
+}
+
+static void
+cv_reindent(struct confvar *cv)
+{
+	struct buf *b = NULL;
+	struct confvar *prev;
+
+	prev = TAILQ_PREV(cv, confvar_head, cv_next);
+	if (prev != NULL)
+		b = buf_get_indent(prev);
+	if (b == NULL) {
+		b = buf_get_indent(cv->cv_parent);
+		if (b == NULL)
+			b = buf_new_from_str("\n");
+		buf_append(b, '\t');
+	}
+	cv->cv_before = b;
+}
+
+static void
+cv_reparent(struct confvar *cv, struct confvar *parent)
+{
+
+	if (cv->cv_parent != NULL)
+		TAILQ_REMOVE(&cv->cv_parent->cv_children, cv, cv_next);
+	cv->cv_parent = parent;
+	TAILQ_INSERT_TAIL(&parent->cv_children, cv, cv_next);
+	cv_reindent(cv);
 }
 
 static bool
