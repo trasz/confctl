@@ -694,6 +694,7 @@ cv_merge(struct confvar *cv, struct confvar *newcv)
 	}
 
 	TAILQ_FOREACH_SAFE(newchild, &newcv->cv_children, cv_next, newtmp) {
+		found = false;
 		TAILQ_FOREACH_SAFE(child, &cv->cv_children, cv_next, tmp) {
 			found = cv_merge(child, newchild);
 			if (found)
