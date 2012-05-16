@@ -109,7 +109,7 @@ main(int argc, char **argv)
 			confvar_print_lines(root, stdout, nflag);
 	} else {
 		confvar_merge(&root, merge);
-#if 0
+#if 1
 		confvar_save(root, argv[0], Iflag);
 #else
 		confvar_print_c(root, stdout);
