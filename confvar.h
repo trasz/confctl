@@ -32,7 +32,7 @@ struct confvar;
 
 struct confvar	*confvar_load(const char *path);
 struct confvar	*confvar_from_line(const char *line);
-void		confvar_save(struct confvar *cv, const char *path);
+void		confvar_save(struct confvar *cv, const char *path, bool in_place);
 void		confvar_print_c(struct confvar *cv, FILE *fp);
 void		confvar_print_lines(struct confvar *cv, FILE *fp, bool values_only);
 void		confvar_merge(struct confvar **cvp, struct confvar *merge);

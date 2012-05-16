@@ -454,8 +454,29 @@ remove_tmpfile(const char *tmppath)
 	errno = saved_errno;
 }
 
-void
-confvar_save(struct confvar *cv, const char *path)
+static void
+confvar_save_in_place(struct confvar *cv, const char *path)
+{
+	FILE *fp;
+	int error;
+
+	fp = fopen(path, "w");
+	if (fp == NULL)
+		err(1, "cannot open %s", path);
+	confvar_print_c(cv, fp);
+	error = fflush(fp);
+	if (error != 0)
+		err(1, "fflush");
+	error = fsync(fileno(fp));
+	if (error != 0)
+		err(1, "fsync");
+	error = fclose(fp);
+	if (error != 0)
+		err(1, "fclose");
+}
+
+static void
+confvar_save_atomic(struct confvar *cv, const char *path)
 {
 	FILE *fp;
 	int error, fd;
@@ -466,7 +487,7 @@ confvar_save(struct confvar *cv, const char *path)
 		err(1, "asprintf");
 	fd = mkstemp(tmppath);
 	if (fd < 0)
-		err(1, "cannot create temporary file %s", tmppath);
+		err(1, "cannot create temporary file %s; use -I to rewrite file in place", tmppath);
 	fp = fdopen(fd, "w");
 	if (fp == NULL) {
 		remove_tmpfile(tmppath);
@@ -481,7 +502,7 @@ confvar_save(struct confvar *cv, const char *path)
 	error = fsync(fd);
 	if (error != 0) {
 		remove_tmpfile(tmppath);
-		err(1, "sync");
+		err(1, "fsync");
 	}
 	error = fclose(fp);
 	if (error != 0) {
@@ -491,8 +512,19 @@ confvar_save(struct confvar *cv, const char *path)
 	error = rename(tmppath, path);
 	if (error != 0) {
 		remove_tmpfile(tmppath);
-		err(1, "cannot replace %s", path);
+		err(1, "cannot replace %s; use -I to rewrite file in place", path);
 	}
+}
+
+void
+confvar_save(struct confvar *cv, const char *path, bool in_place)
+{
+
+	if (in_place)
+		confvar_save_in_place(cv, path);
+	else
+		confvar_save_atomic(cv, path);
+
 }
 
 static bool

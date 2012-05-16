@@ -38,7 +38,7 @@ usage(void)
 {
 	fprintf(stderr, "usage: confctl [-cn] config-path [name...]\n");
 	fprintf(stderr, "       confctl [-acn] config-path\n");
-	fprintf(stderr, "       confctl -w name=value config-path\n");
+	fprintf(stderr, "       confctl [-I] -w name=value config-path\n");
 	exit(1);
 }
 
@@ -46,16 +46,19 @@ int
 main(int argc, char **argv)
 {
 	int ch, i;
-	bool cflag = false, aflag = false, nflag = false;
+	bool cflag = false, aflag = false, Iflag = false, nflag = false;
 	struct confvar *root, *cv, *filter = NULL, *merge = NULL;
 
-	while ((ch = getopt(argc, argv, "acnw:")) != -1) {
+	while ((ch = getopt(argc, argv, "acInw:")) != -1) {
 		switch (ch) {
 		case 'a':
 			aflag = true;
 			break;
 		case 'c':
 			cflag = true;
+			break;
+		case 'I':
+			Iflag = true;
 			break;
 		case 'n':
 			nflag = true;
@@ -82,6 +85,8 @@ main(int argc, char **argv)
 		errx(1, "-c and -w are mutually exclusive");
 	if (nflag && merge)
 		errx(1, "-n and -w are mutually exclusive");
+	if (Iflag && !merge)
+		errx(1, "-I can only be used with -w");
 	if (nflag && cflag)
 		errx(1, "-n and -c are mutually exclusive");
 	if (aflag && argc > 1)
@@ -105,7 +110,7 @@ main(int argc, char **argv)
 	} else {
 		confvar_merge(&root, merge);
 #if 0
-		confvar_save(root, argv[0]);
+		confvar_save(root, argv[0], Iflag);
 #else
 		confvar_print_c(root, stdout);
 #endif

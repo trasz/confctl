@@ -4,8 +4,6 @@ Things to do before calling it done:
 
  - Handle escaping and quoting in line parser
 
- - "-I" option to force in-line rewriting
-
  - Handle duplicates ('1 { some var } 2 { yadda yadda } 1 { some other var }')
 
  - Support syntax like this: 'whatever "name" { some stuff }'
