@@ -533,13 +533,9 @@ cv_print_c(struct confvar *cv, FILE *fp)
 	buf_print(cv->cv_before, fp);
 	buf_print(cv->cv_name, fp);
 	buf_print(cv->cv_middle, fp);
-
-	if (cv_is_container(cv)) {
-		TAILQ_FOREACH(child, &cv->cv_children, cv_next)
-			cv_print_c(child, fp);
-	} else
-		buf_print(cv->cv_value, fp);
-
+	TAILQ_FOREACH(child, &cv->cv_children, cv_next)
+		cv_print_c(child, fp);
+	buf_print(cv->cv_value, fp);
 	buf_print(cv->cv_after, fp);
 }
 
