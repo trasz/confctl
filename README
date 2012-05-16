@@ -61,15 +61,16 @@ interfaces {
 	}
 }
 
-Note that file modification preserves formatting and indentation.  It also preserves
-all the comments, including ones for variables modified in place.
+Note that file modification preserves formatting and indentation.  It also
+preserves all the comments, including ones for variables modified in place.
 
 Code
 ====
 
 The code is distributed under the terms of two-clause BSD license.  This means
-you can do pretty much whatever you like, including using it in closed-source software.
+you can do pretty much whatever you like, including using it in closed-source
+software.
 
-The whole thing is written in C.  The only dependency is libc.  It doesn't require any
-additional libraries; it doesn't even require C++ runtime.
+The whole thing is written in C.  The only dependency is libc.  It doesn't
+require any additional libraries; it doesn't even require C++ runtime.
 
