@@ -64,6 +64,12 @@ interfaces {
 Note that file modification preserves formatting and indentation.  It also
 preserves all the comments, including ones for variables modified in place.
 
+Also note that by default, modification is done by writing a temporary
+copy of the file, in the same containing directory, and then renaming
+it, replacing the old file.  This will fail if it's impossible to create
+new files, and won't do the right thing when the file name is a symlink.
+In that case, use "-I" option to rewrite configuration file in place.
+
 Code
 ====
 
