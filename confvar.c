@@ -71,6 +71,7 @@ buf_finish(struct buf *b)
 {
 
 	buf_append(b, '\0');
+	b->b_len--;
 }
 
 static struct buf *
@@ -93,10 +94,10 @@ buf_print(struct buf *b, FILE *fp)
 
 	if (b == NULL)
 		return;
-	assert(b->b_len >= 1);
-	if (b->b_len == 1)
+	assert(b->b_len >= 0);
+	if (b->b_len == 0)
 		return;
-	written = fwrite(b->b_buf, b->b_len - 1, 1, fp);
+	written = fwrite(b->b_buf, b->b_len, 1, fp);
 	if (written != 1)
 		err(1, "fwrite");
 }
@@ -111,7 +112,7 @@ cv_new(struct confvar *parent, struct buf *name)
 		err(1, "malloc");
 
 	assert(name != NULL);
-	assert(name->b_len > 1);
+	assert(name->b_len > 0);
 
 	if (parent != NULL) {
 		assert(parent->cv_value == NULL);
@@ -392,7 +393,7 @@ cv_load(struct confvar *parent, FILE *fp)
 	before = buf_read_before(fp);
 	name = buf_read_name(fp);
 
-	if (name->b_len == 1) {
+	if (name->b_len == 0) {
 		parent->cv_after = before;
 		return (true);
 	}
@@ -625,10 +626,10 @@ buf_get_indent(struct confvar *cv)
 	int i;
 
 	b = cv->cv_before;
-	if (b == NULL || b->b_len <= 2)
+	if (b == NULL || b->b_len <= 1)
 		return (NULL);
 
-	for (i = b->b_len - 1; i >= 1; i--) {
+	for (i = b->b_len; i >= 0; i--) {
 		if (b->b_buf[i] == '\n' || b->b_buf[i] == '\r')
 			break;
 	}
@@ -642,7 +643,7 @@ static void
 cv_reindent(struct confvar *cv)
 {
 	struct buf *b = NULL;
-	struct confvar *prev;
+	struct confvar *prev, *child;
 
 	prev = TAILQ_PREV(cv, confvar_head, cv_next);
 	if (prev != NULL)
@@ -651,9 +652,19 @@ cv_reindent(struct confvar *cv)
 		b = buf_get_indent(cv->cv_parent);
 		if (b == NULL)
 			b = buf_new_from_str("\n");
-		buf_append(b, '\t');
+		else {
+			buf_append(b, '\t');
+			buf_finish(b);
+		}
 	}
 	cv->cv_before = b;
+
+	if (cv_is_container(cv)) {
+		cv->cv_middle = buf_new_from_str(" {");
+		cv->cv_after = buf_new_from_str("}");
+		TAILQ_FOREACH(child, &cv->cv_children, cv_next)
+			cv_reindent(child);
+	}
 }
 
 static void
