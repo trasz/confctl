@@ -136,18 +136,6 @@ cv_new_root(void)
 	return (cv);
 }
 
-static struct confvar *
-cv_new_value(struct confvar *parent, struct buf *name, struct buf *value)
-{
-	struct confvar *cv;
-
-	cv = cv_new(parent, name);
-	cv->cv_middle = buf_new_from_str(" ");
-	cv->cv_value = value;
-
-	return (cv);
-}
-
 static struct buf *
 buf_read_before(FILE *fp)
 {
@@ -622,29 +610,63 @@ struct confvar *
 confvar_from_line(const char *line)
 {
 	struct confvar *cv, *parent, *root;
-	char *name, *value, *next, *tofree;
-
-	next = tofree = strdup(line);
-	if (next == NULL)
-		err(1, "strdup");
+	struct buf *b;
+	bool escaped = false, quoted = false;
+	int i;
+	char ch;
 
 	root = parent = cv_new_root();
 
-	while ((name = strsep(&next, ".")) != NULL) {
-		value = name;
-		name = strsep(&value, "=");
-		if (value != NULL) {
-			if (next != NULL)
-				errx(1, "trailing name (%s) after value (%s)", next, value);
-			cv = cv_new_value(parent, buf_new_from_str(name), buf_new_from_str(value));
-		} else
-			cv = cv_new(parent, buf_new_from_str(name));
-		parent = cv;
+	b = buf_new();
+	for (i = 0;; i++) {
+		ch = line[i];
+		if (ch == '\0') {
+			if (b->b_len == 0)
+				errx(1, "empty name at the end of the line");
+			buf_finish(b);
+			cv = cv_new(parent, b);
+			cv->cv_middle = buf_new_from_str(" ");
+			return (root);
+		}
+		if (escaped) {
+			buf_append(b, ch);
+			escaped = false;
+			continue;
+		}
+		if (ch == '\\') {
+			escaped = true;
+			continue;
+		}
+		if (ch == '"')
+			quoted = !quoted;
+		if (quoted) {
+			buf_append(b, ch);
+			continue;
+		}
+		if (ch == '.' || ch == '=') {
+			if (b->b_len == 0)
+				errx(1, "empty name");
+			buf_finish(b);
+			cv = cv_new(parent, b);
+			cv->cv_middle = buf_new_from_str(" ");
+			b = buf_new();
+			if (ch == '.') {
+				parent = cv;
+				continue;
+			}
+			assert(ch == '=');
+			for (i++;; i++) {
+				ch = line[i];
+				if (ch == '\0') {
+					buf_finish(b);
+					cv->cv_value = b;
+					return (root);
+				}
+				buf_append(b, ch);
+			}
+		}
+		buf_append(b, ch);
 	}
-
-	free(tofree);
-
-	return (root);
 }
 
 static struct buf *
