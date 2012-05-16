@@ -34,6 +34,13 @@ struct buf {
 	size_t	b_len;
 };
 
+/*
+ * Tree of configuration variables.  For each element, we store the variable
+ * name, it's value, subvalues (children), "junk text" (comments, whitespace,
+ * newlines, curly brackets etc) stored in the configuration file before the
+ * variable name (cv_before), between the name and value or child variables
+ * (cv_middle), and after value or child variables (cv_after).
+ */
 struct confvar {
 	TAILQ_ENTRY(confvar)	cv_next;
 	struct buf		*cv_before;

@@ -1,0 +1,75 @@
+Usage
+=====
+
+Confctl is a tool designed for easy access to configuration files in C-like
+syntax from shell scripts.  For example, if you have a configuration file
+that looks like this:
+
+interfaces {
+	eth0 {
+		ip-address	192.168.1.1
+		mtu		9000
+	}
+
+	eth1 {
+		ip-address	192.168.2.1
+		description	"Uplink to Telia"
+	}
+}
+
+... then you can access all the variables like this (note the "-a" option):
+
+% confctl -a config-file
+interfaces.eth0.ip-address=192.168.1.1
+interfaces.eth0.mtu=9000
+interfaces.eth1.ip-address=192.168.2.1
+interfaces.eth1.description="Uplink to Telia"
+
+You can also query individual variables:
+
+% confctl config-file interfaces.eth0.ip-address interfaces.eth1.ip-address 
+interfaces.eth0.ip-address=192.168.1.1
+interfaces.eth1.ip-address=192.168.2.1
+
+To modify a variable, use the "-w" option:
+
+% confctl -w interfaces.eth0.ip-address=192.168.1.2 config-file
+
+You can modify pass the "-w" option multiple times to set several variables
+at once.  You use exactly the same syntax to add new variables:
+
+% confctl -w interfaces.eth2.ip-address=\"10.0.0.1\" -w interfaces.eth2.netmask=24 config-file
+% confctl config-file interfaces.eth2
+interfaces.eth2.ip-address=whatever
+interfaces.eth2.netmask=24
+% cat config-file
+
+interfaces {
+	eth0 {
+		ip-address	192.168.1.1
+		mtu		9000
+	}
+
+	eth1 {
+		ip-address	192.168.2.1
+		description	"Uplink to Telia"
+	}
+
+	eth2 {
+		ip-address	"10.0.0.1"
+		netmask		24
+	}
+}
+
+Note that file modification preserves formatting and indentation.  It also preserves
+all the comments, including ones for variables modified in place.
+
+Code
+====
+
+The code is distributed under the terms of two-clause BSD license.  This means
+you can do pretty much whatever you like, including using it in closed-source software.
+
+The whole thing is written in C.  The only dependency is libc.  It doesn't require any
+additional libraries; it doesn't even require C++ runtime.
+
