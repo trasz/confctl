@@ -23,7 +23,6 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/queue.h>
 #include <assert.h>
 #include <ctype.h>
 #include <err.h>
@@ -33,6 +32,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#include "queue.h"
 
 #include "confvar.h"
 #include "confvar_private.h"

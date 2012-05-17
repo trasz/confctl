@@ -26,7 +26,7 @@
 #ifndef CONFCTL_PRIVATE_H
 #define	CONFCTL_PRIVATE_H
 
-#include <sys/queue.h>
+#include "queue.h"
 
 struct buf {
 	char	*b_buf;
