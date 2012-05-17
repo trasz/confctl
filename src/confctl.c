@@ -49,6 +49,9 @@ main(int argc, char **argv)
 	bool cflag = false, aflag = false, Iflag = false, nflag = false;
 	struct confvar *root, *cv, *filter = NULL, *merge = NULL;
 
+	if (argc <= 1)
+		usage();
+
 	while ((ch = getopt(argc, argv, "acInw:")) != -1) {
 		switch (ch) {
 		case 'a':
