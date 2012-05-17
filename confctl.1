@@ -1,0 +1,126 @@
+.\" Process this file with
+.\" groff -man -Tascii foo.1
+.\"
+.TH CONFCTL 1 "20 May 2012" confctl "User Manuals"
+.SH NAME
+confctl \- sysctl-like tool for config files
+.SH SYNOPSIS
+.B confctl [-an]
+.I config-file
+.br
+.B confctl [-n]
+.I config-file
+.I variable-name
+.B ...
+.br
+.B confctl [-I] -w
+.I variable-name=value
+.I config-file
+.SH DESCRIPTION
+.B confctl
+provides access to configuration files in C-like syntax
+via
+.BR sysctl(8) -like
+interface, making it easy to use from shell scripts.
+.PP
+The following options are available:
+.IP -a
+Show all the variables and their values.
+.IP -n
+Show only values, not names.
+.IP -w
+Change value of configuration variable and update the configuration
+file.
+Variable is create if it doesn't yet exist.
+.IP -I
+Instead of writing a temporary file and then atomically replacing
+the configuration file, rewrite it in place.
+.SH EXAMPLES
+Say you have a configuration file that looks like this:
+.PP
+.nf
+interfaces {
+	eth0 {
+		ip-address	192.168.1.1
+		mtu		9000
+	}
+
+	eth1 {
+		ip-address	192.168.2.1
+		description	"Uplink to Telia"
+	}
+}
+.fi
+.PP
+You can access all the variables like this (note the
+.B -a
+option):
+.PP
+.nf
+% confctl -a config-file
+interfaces.eth0.ip-address=192.168.1.1
+interfaces.eth0.mtu=9000
+interfaces.eth1.ip-address=192.168.2.1
+interfaces.eth1.description="Uplink to Telia"
+.fi
+.PP
+You can also query individual variables:
+.PP
+.nf
+% confctl config-file interfaces.eth0.ip-address interfaces.eth1.ip-address 
+interfaces.eth0.ip-address=192.168.1.1
+interfaces.eth1.ip-address=192.168.2.1
+.fi
+.PP
+To modify a variable, use the
+.B -w
+option:
+.PP
+.nf
+% confctl -w interfaces.eth0.ip-address=192.168.1.2 config-file
+.fi
+.PP
+You can pass the
+.B -w
+option multiple times to set several variables
+at once.  You use exactly the same syntax to add new variables:
+.PP
+.nf
+% confctl -w interfaces.eth2.ip-address=10.0.0.1 -w interfaces.eth2.netmask=24 config-file
+% confctl config-file interfaces.eth2
+interfaces.eth2.ip-address=whatever
+interfaces.eth2.netmask=24
+% cat config-file
+
+interfaces {
+	eth0 {
+		ip-address	192.168.1.1
+		mtu		9000
+	}
+
+	eth1 {
+		ip-address	192.168.2.1
+		description	"Uplink to Telia"
+	}
+
+	eth2 {
+		ip-address	10.0.0.1
+		netmask		24
+	}
+}
+.fi
+.PP
+Note that file modification preserves formatting and indentation.  It also
+preserves all the comments, including ones for variables modified in place.
+.PP
+Also note that by default, modification is done by writing a temporary
+copy of the file, in the same containing directory, and then renaming
+it, replacing the old file.  This will fail if it's impossible to create
+new files, and won't do the right thing when the file name is a symlink.
+In that case, use
+.B -I
+option to rewrite configuration file in place.
+.SH AUTHOR
+Edward Tomasz Napierala <trasz@FreeBSD.org>
+.SH "SEE ALSO"
+.BR sysctl (8)
