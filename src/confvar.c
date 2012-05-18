@@ -163,7 +163,7 @@ buf_read_before(FILE *fp)
 {
 	int ch;
 	struct buf *b;
-	bool comment = false;
+	bool comment = false, no_newline = false;;
 
 	b = buf_new();
 
@@ -173,6 +173,12 @@ buf_read_before(FILE *fp)
 			break;
 		if (ferror(fp) != 0)
 			err(1, "getc");
+		if (no_newline && (ch == '\n' || ch == '\r')) {
+			ch = ungetc(ch, fp);
+			if (ch == EOF)
+				err(1, "ungetc");
+			break;
+		}
 		if (comment) {
 			if (ch == '\n' || ch == '\r')
 				comment = false;
@@ -190,8 +196,9 @@ buf_read_before(FILE *fp)
 		 * variable.
 		 */
 		if (ch == '}') {
+			no_newline = true;
 			buf_append(b, ch);
-			break;
+			continue;
 		}
 		if (isspace(ch) || ch == ';') {
 			buf_append(b, ch);
