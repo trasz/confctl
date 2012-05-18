@@ -50,8 +50,8 @@ $ cat n
 > 		# Add some more uplinks some day.
 > 	} # meh
 > 	eth2 {
-> 		ip-address      10.0.0.1
-> 		netmask		24
+> 		ip-address 10.0.0.1
+> 		netmask 24
 > 	}
 > }
 
