@@ -75,6 +75,27 @@ buf_finish(struct buf *b)
 	b->b_len--;
 }
 
+static char
+buf_last(struct buf *b)
+{
+	char ch;
+
+	assert(b->b_len >= 1);
+
+	ch = b->b_buf[b->b_len - 1];
+	assert(ch != '\0');
+
+	return (ch);
+}
+
+static char
+buf_strip(struct buf *b)
+{
+
+	assert(b->b_len > 0);
+	b->b_len--;
+}
+
 static struct buf *
 buf_new_from_str(const char *str)
 {
@@ -185,7 +206,6 @@ buf_read_before(FILE *fp)
 	//fprintf(stderr, "before '%s'\n", b->b_buf);
 	return (b);
 }
-
 
 static struct buf *
 buf_read_name(FILE *fp)
@@ -319,6 +339,17 @@ buf_read_value(FILE *fp)
 			ch = ungetc(ch, fp);
 			if (ch == EOF)
 				err(1, "ungetc");
+			for (;;) {
+				if (b->b_len == 0)
+					break;
+				ch = buf_last(b);
+				if (!isspace(ch))
+					break;
+				buf_strip(b);
+				ch = ungetc(ch, fp);
+				if (ch == EOF)
+					err(1, "ungetc");
+			}
 			break;
 		}
 		buf_append(b, ch);
