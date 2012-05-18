@@ -4,6 +4,10 @@ $ cp varia.conf v
 $ ../src/confctl -a v
 > varia.x=y
 > varia.z=
+> varia.1.escaped\ name=
+> varia.1."quoted name"=val\\ue\
+> 			same value
+> varia.1."escape\"check"="in\"value"
 > varia.1.2.3.4=5
 > varia.1.2.3.6=
 > varia.1.2.meh=
