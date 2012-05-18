@@ -219,7 +219,7 @@ buf_read_name(FILE *fp)
 {
 	int ch;
 	struct buf *b;
-	bool quoted = false, escaped = false;
+	bool quoted = false, squoted = false, escaped = false;
 
 	b = buf_new();
 
@@ -239,9 +239,11 @@ buf_read_name(FILE *fp)
 			buf_append(b, ch);
 			continue;
 		}
-		if (ch == '"')
+		if (!squoted && ch == '"')
 			quoted = !quoted;
-		if (quoted) {
+		if (!quoted && ch == '\'')
+			squoted = !squoted;
+		if (quoted || squoted) {
 			buf_append(b, ch);
 			continue;
 		}
@@ -316,7 +318,7 @@ buf_read_value(FILE *fp)
 {
 	int ch;
 	struct buf *b;
-	bool quoted = false, escaped = false;
+	bool quoted = false, squoted = false, escaped = false;
 
 	b = buf_new();
 
@@ -336,9 +338,11 @@ buf_read_value(FILE *fp)
 			buf_append(b, ch);
 			continue;
 		}
-		if (ch == '"')
+		if (!squoted && ch == '"')
 			quoted = !quoted;
-		if (quoted) {
+		if (!quoted && ch == '\'')
+			squoted = !squoted;
+		if (quoted || squoted) {
 			buf_append(b, ch);
 			continue;
 		}
@@ -650,7 +654,7 @@ confvar_from_line(const char *line)
 {
 	struct confvar *cv, *parent, *root;
 	struct buf *b;
-	bool escaped = false, quoted = false;
+	bool escaped = false, quoted = false, squoted = false;
 	int i;
 	char ch;
 
@@ -676,9 +680,11 @@ confvar_from_line(const char *line)
 			escaped = true;
 			continue;
 		}
-		if (ch == '"')
+		if (!squoted && ch == '"')
 			quoted = !quoted;
-		if (quoted) {
+		if (!quoted && ch == '\'')
+			squoted = !squoted;
+		if (quoted || squoted) {
 			buf_append(b, ch);
 			continue;
 		}

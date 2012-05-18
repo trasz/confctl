@@ -6,3 +6,5 @@ Things to do before calling it done:
 
  - Support syntax like this: 'whatever "name" { some stuff }'
 
+ - Handle jail.conf syntax ('var = value; // and C++ comments').
+
