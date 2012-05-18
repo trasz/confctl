@@ -263,7 +263,7 @@ buf_read_middle(FILE *fp, bool *opening_bracket)
 {
 	int ch;
 	struct buf *b;
-	bool escaped;
+	bool escaped = false;
 
 	*opening_bracket = false;
 
