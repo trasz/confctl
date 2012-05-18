@@ -1,0 +1,11 @@
+$ rm -f n
+$ cp varia.conf v
+
+$ ../src/confctl -a v
+> varia.x=y
+> varia.z=
+> varia.1.2.3.4=5
+> varia.1.2.3.6=
+> varia.1.2.meh=
+> varia.1.2.moo=
+
