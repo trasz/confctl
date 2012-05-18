@@ -40,7 +40,7 @@ You use exactly the same syntax to add new variables:
 
 % confctl -w interfaces.eth2.ip-address=10.0.0.1 -w interfaces.eth2.netmask=24 config-file
 % confctl config-file interfaces.eth2
-interfaces.eth2.ip-address=whatever
+interfaces.eth2.ip-address=10.0.0.1
 interfaces.eth2.netmask=24
 % cat config-file
 
