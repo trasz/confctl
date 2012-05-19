@@ -24,3 +24,54 @@ $ ../src/confctl -a v
 > varia.1.2.meh=
 > varia.1.2.moo=
 
+$ ../src/confctl -w varia.x=new-x -w varia.z=new-z -w varia.new-var=meh -w outside-of-1=wzium v
+$ cat v
+> # Opening comment
+> # on top
+> # of the file.
+> 
+> varia {
+> 	# meh
+> 	x new-x	# x with value
+> 	z new-z # z without value
+> 	# another variable goes here
+> 	1 {
+> 		escaped\ name
+> 		"quoted name" val\\ue\
+> 			same value
+> 		quoted-newlines	'from here
+> 			to here'
+> 		"escape\"check" "in\"value"
+> 		'squoted name'
+> 		'escaped\'squote' 'in\'value'
+> 
+> 		xxx value \# with hash
+> 		yyy same thing '# different way'
+> 		yy2 same thing "# different way"
+> 
+> 		'quoted " squote'
+> 		"squoted ' quote"
+> 		escaped	\{ brackets \}
+> 		quoted '{' brackets '}'
+> 
+> 		# comment before 2
+> 		2 {
+> 			3 {
+> 				4 5; 6 # comment for 6
+> 			}
+> 			
+> 			meh
+> 			moo
+> 
+> 		} # comment after 2
+> 	}
+> 	new-var meh
+> 
+> 	# nothing interesting here
+> 
+> }
+> outside-of-1 wzium
+> 
+> # that's all, folks.
+
+$ rm -f v
