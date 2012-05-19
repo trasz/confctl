@@ -282,12 +282,29 @@ buf_read_middle(FILE *fp, bool *opening_bracket)
 			buf_append(b, ch);
 			continue;
 		}
-		if (escaped && (ch == '\n' || ch == '\r')) {
+		if (escaped) {
 			escaped = false;
-			buf_append(b, ch);
-			continue;
+			if (ch == '\n' || ch == '\r') {
+				buf_append(b, ch);
+				continue;
+			} else {
+				/*
+				 * The only escaped thing that's allowed
+				 * in cv_middle are newlines.  All the rest
+				 * goes to cv_value.
+				 */
+				ch = ungetc(ch, fp);
+				if (ch == EOF)
+					err(1, "ungetc");
+				ch = buf_last(b);
+				assert(ch == '\\');
+				buf_strip(b);
+				ch = ungetc(ch, fp);
+				if (ch == EOF)
+					err(1, "ungetc");
+				break;
+			}
 		}
-		escaped = false;
 		if (ch == '\n' || ch == '\r' || ch == '#' || ch == ';') {
 			ch = ungetc(ch, fp);
 			if (ch == EOF)

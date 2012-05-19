@@ -7,6 +7,8 @@ $ ../src/confctl -a v
 > varia.1.escaped\ name=
 > varia.1."quoted name"=val\\ue\
 > 			same value
+> varia.1.quoted-newlines='from here
+> 			to here'
 > varia.1."escape\"check"="in\"value"
 > varia.1.'squoted name'=
 > varia.1.'escaped\'squote'='in\'value'
@@ -15,6 +17,8 @@ $ ../src/confctl -a v
 > varia.1.yy2=same thing "# different way"
 > varia.1.'quoted " squote'=
 > varia.1."squoted ' quote"=
+> varia.1.escaped=\{ brackets \}
+> varia.1.quoted='{' brackets '}'
 > varia.1.2.3.4=5
 > varia.1.2.3.6=
 > varia.1.2.meh=
