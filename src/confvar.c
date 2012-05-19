@@ -225,8 +225,11 @@ buf_read_name(FILE *fp)
 
 	for (;;) {
 		ch = getc(fp);
-		if (feof(fp) != 0)
+		if (feof(fp) != 0) {
+			if (quoted || squoted)
+				errx(1, "premature end of file");
 			break;
+		}
 		if (ferror(fp) != 0)
 			err(1, "getc");
 		if (escaped) {
@@ -341,8 +344,11 @@ buf_read_value(FILE *fp)
 
 	for (;;) {
 		ch = getc(fp);
-		if (feof(fp) != 0)
+		if (feof(fp) != 0) {
+			if (quoted || squoted)
+				errx(1, "premature end of file");
 			break;
+		}
 		if (ferror(fp) != 0)
 			err(1, "getc");
 		if (escaped) {
@@ -472,6 +478,7 @@ struct confvar *
 confvar_load(const char *path)
 {
 	struct confvar *cv;
+	bool done;
 	FILE *fp;
 
 	fp = fopen(path, "r");
@@ -480,11 +487,9 @@ confvar_load(const char *path)
 
 	cv = cv_new_root();
 	for (;;) {
-		if (feof(fp) != 0)
+		done = cv_load(cv, fp);
+		if (done)
 			break;
-		if (ferror(fp) != 0)
-			err(1, "getc");
-		cv_load(cv, fp);
 	}
 
 	return (cv);

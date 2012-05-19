@@ -1,5 +1,7 @@
 Things to do before calling it done:
 
+ - properly bail out on EOF without closing curly brackets.
+
  - Handle escaping and quoting in printing routines
 
  - Handle duplicates ('1 { some var } 2 { yadda yadda } 1 { some other var }')
