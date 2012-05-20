@@ -312,6 +312,17 @@ buf_read_middle(FILE *fp, bool *opening_bracket)
 			ch = ungetc(ch, fp);
 			if (ch == EOF)
 				err(1, "ungetc");
+			for (;;) {
+				if (b->b_len == 0)
+					break;
+				ch = buf_last(b);
+				if (!isspace(ch))
+					break;
+				buf_strip(b);
+				ch = ungetc(ch, fp);
+				if (ch == EOF)
+					err(1, "ungetc");
+			}
 			break;
 		}
 		if (ch == '{') {
@@ -808,6 +819,8 @@ cv_merge(struct confvar *cv, struct confvar *newcv)
 		return (false);
 
 	if (TAILQ_EMPTY(&newcv->cv_children)) {
+		if (cv->cv_middle->b_len == 0)
+			cv->cv_middle = newcv->cv_middle;
 		cv->cv_value = newcv->cv_value;
 		TAILQ_FOREACH_SAFE(newchild, &newcv->cv_children, cv_next, newtmp)
 			cv_reparent(newchild, cv);
