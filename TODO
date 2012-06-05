@@ -15,3 +15,8 @@ Things to do before calling it done:
  - Handle 'var = value' syntax.  This requires mimicking cv_middle from existing
    entries
 
+ - Handle semicolons at the end.  This requires mimicking cv_after from existing
+   entries.
+
+ - Add modification regression tests to jail.test.
+
