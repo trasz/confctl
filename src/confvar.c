@@ -308,6 +308,10 @@ buf_read_middle(FILE *fp, bool *opening_bracket)
 				break;
 			}
 		}
+		/*
+		 * If there is no value, i.e. it's the end of the line,
+		 * all that stuff should go to cv_after, not cv_middle.
+		 */
 		if (ch == '\n' || ch == '\r' || ch == '#' || ch == ';') {
 			ch = ungetc(ch, fp);
 			if (ch == EOF)
@@ -316,7 +320,7 @@ buf_read_middle(FILE *fp, bool *opening_bracket)
 				if (b->b_len == 0)
 					break;
 				ch = buf_last(b);
-				if (!isspace(ch))
+				if (!isspace(ch) && ch != '=')
 					break;
 				buf_strip(b);
 				ch = ungetc(ch, fp);
@@ -330,7 +334,7 @@ buf_read_middle(FILE *fp, bool *opening_bracket)
 			buf_append(b, ch);
 			break;
 		}
-		if (isspace(ch)) {
+		if (isspace(ch) || ch == '=') {
 			buf_append(b, ch);
 			continue;
 		}
