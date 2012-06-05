@@ -1,4 +1,4 @@
-$ rm -f n
+$ rm -f v
 $ cp varia.conf v
 
 $ ../src/confctl -a v
