@@ -80,3 +80,18 @@ software.
 The whole thing is written in C.  The only dependency is libc.  It doesn't
 require any additional libraries; it doesn't even require C++ runtime.
 
+Installation
+============
+
+Confctl uses standard autotools setup.  To build it, do:
+
+./configure
+make all install
+
+If there is no configure script (i.e. because you pulled it from the Git repo),
+you have to generate it using:
+
+autoreconf -i
+
+For this to work, you need to have autoconf and automake installed.
+
