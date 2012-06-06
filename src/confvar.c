@@ -163,7 +163,7 @@ buf_read_before(FILE *fp)
 {
 	int ch;
 	struct buf *b;
-	bool comment = false, no_newline = false;
+	bool comment = false, no_newline = false, slashed = false;
 
 	b = buf_new();
 
@@ -179,6 +179,8 @@ buf_read_before(FILE *fp)
 				err(1, "ungetc");
 			break;
 		}
+		if (ch != '/')
+			slashed = false;
 		if (comment) {
 			if (ch == '\n' || ch == '\r')
 				comment = false;
@@ -187,6 +189,18 @@ buf_read_before(FILE *fp)
 		}
 		if (ch == '#') {
 			comment = true;
+			buf_append(b, ch);
+			continue;
+		}
+		/*
+		 * Handle "// comments".
+		 */
+		if (ch == '/') {
+			if (slashed) {
+				slashed = false;
+				comment = true;
+			} else
+				slashed = true;
 			buf_append(b, ch);
 			continue;
 		}
@@ -207,6 +221,12 @@ buf_read_before(FILE *fp)
 		ch = ungetc(ch, fp);
 		if (ch == EOF)
 			err(1, "ungetc");
+		if (slashed) {
+			buf_strip(b);
+			ch = ungetc('/', fp);
+			if (ch == EOF)
+				err(1, "ungetc");
+		}
 		break;
 	}
 	buf_finish(b);
@@ -219,7 +239,7 @@ buf_read_name(FILE *fp)
 {
 	int ch;
 	struct buf *b;
-	bool quoted = false, squoted = false, escaped = false;
+	bool escaped = false, quoted = false, squoted = false, slashed = false;;
 
 	b = buf_new();
 
@@ -237,6 +257,8 @@ buf_read_name(FILE *fp)
 			escaped = false;
 			continue;
 		}
+		if (ch != '/')
+			slashed = false;
 		if (ch == '\\') {
 			escaped = true;
 			buf_append(b, ch);
@@ -255,6 +277,22 @@ buf_read_name(FILE *fp)
 			if (ch == EOF)
 				err(1, "ungetc");
 			break;
+		}
+		/*
+		 * Handle "// comments".
+		 */
+		if (ch == '/') {
+			if (slashed) {
+				ch = ungetc(ch, fp);
+				if (ch == EOF)
+					err(1, "ungetc");
+				buf_strip(b);
+				ch = ungetc('/', fp);
+				if (ch == EOF)
+					err(1, "ungetc");
+				break;
+			}
+			slashed = true;
 		}
 		buf_append(b, ch);
 	}
@@ -312,6 +350,9 @@ buf_read_middle(FILE *fp, bool *opening_bracket)
 		 * If there is no value, i.e. it's the end of the line,
 		 * all that stuff should go to cv_after, not cv_middle.
 		 */
+		/*
+		 * XXX: Isn't this kinda pointless?  Move it to the end of the loop.
+		 */
 		if (ch == '\n' || ch == '\r' || ch == '#' || ch == ';') {
 			ch = ungetc(ch, fp);
 			if (ch == EOF)
@@ -353,7 +394,7 @@ buf_read_value(FILE *fp)
 {
 	int ch;
 	struct buf *b;
-	bool quoted = false, squoted = false, escaped = false;
+	bool escaped = false, quoted = false, squoted = false, slashed = false;
 
 	b = buf_new();
 
@@ -371,6 +412,8 @@ buf_read_value(FILE *fp)
 			escaped = false;
 			continue;
 		}
+		if (ch != '/')
+			slashed = false;
 		if (ch == '\\') {
 			escaped = true;
 			buf_append(b, ch);
@@ -384,10 +427,20 @@ buf_read_value(FILE *fp)
 			buf_append(b, ch);
 			continue;
 		}
-		if (ch == '\n' || ch == '\r' || ch == '#' || ch == ';' || ch == '{' || ch == '}') {
+		if (ch == '\n' || ch == '\r' || ch == '#' || ch == ';' || ch == '{' || ch == '}' || (ch == '/' && slashed)) {
 			ch = ungetc(ch, fp);
 			if (ch == EOF)
 				err(1, "ungetc");
+			if (slashed) {
+				buf_strip(b);
+				ch = ungetc('/', fp);
+				if (ch == EOF)
+					err(1, "ungetc");
+			}
+
+			/*
+			 * All the trailing whitespace after the value should go into cv_after.
+			 */
 			for (;;) {
 				if (b->b_len == 0)
 					break;
@@ -401,6 +454,8 @@ buf_read_value(FILE *fp)
 			}
 			break;
 		}
+		if (ch == '/')
+			slashed = true;
 		buf_append(b, ch);
 	}
 	buf_finish(b);
@@ -413,7 +468,7 @@ buf_read_after(FILE *fp)
 {
 	int ch;
 	struct buf *b;
-	bool comment = false;
+	bool comment = false, slashed = false;;
 
 	b = buf_new();
 
@@ -423,6 +478,8 @@ buf_read_after(FILE *fp)
 			break;
 		if (ferror(fp) != 0)
 			err(1, "getc");
+		if (ch != '/')
+			slashed = false;
 		if (ch == '\n' || ch == '\r') {
 			ch = ungetc(ch, fp);
 			if (ch == EOF)
@@ -438,6 +495,18 @@ buf_read_after(FILE *fp)
 			buf_append(b, ch);
 			continue;
 		}
+		/*
+		 * Handle "// comments".
+		 */
+		if (ch == '/') {
+			if (slashed) {
+				slashed = false;
+				comment = true;
+			} else
+				slashed = true;
+			buf_append(b, ch);
+			continue;
+		}
 		if (isspace(ch) || ch == ';') {
 			buf_append(b, ch);
 			continue;
@@ -445,6 +514,12 @@ buf_read_after(FILE *fp)
 		ch = ungetc(ch, fp);
 		if (ch == EOF)
 			err(1, "ungetc");
+		if (slashed) {
+			buf_strip(b);
+			ch = ungetc('/', fp);
+			if (ch == EOF)
+				err(1, "ungetc");
+		}
 		break;
 	}
 	buf_finish(b);
