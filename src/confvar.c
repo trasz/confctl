@@ -348,10 +348,8 @@ buf_read_middle(FILE *fp, bool *opening_bracket)
 		}
 		/*
 		 * If there is no value, i.e. it's the end of the line,
-		 * all that stuff should go to cv_after, not cv_middle.
-		 */
-		/*
-		 * XXX: Isn't this kinda pointless?  Move it to the end of the loop.
+		 * all that stuff including trailing spaces should go to cv_after,
+		 * not cv_middle.
 		 */
 		if (ch == '\n' || ch == '\r' || ch == '#' || ch == ';') {
 			ch = ungetc(ch, fp);
