@@ -10,8 +10,6 @@ Things to do before calling it done:
 
  - Support appending semicolons to newly added entries
 
- - Support '//' comments
-
  - Handle 'var = value' syntax.  This requires mimicking cv_middle from existing
    entries
 
@@ -19,4 +17,8 @@ Things to do before calling it done:
    entries.
 
  - Add modification regression tests to jail.test.
+
+ - Consider rewriting the parser using regexps; it's getting complicated.
+
+ - Handle newlines in names or values in a sane way, perhaps by escaping them.
 

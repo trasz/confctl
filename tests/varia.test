@@ -23,6 +23,12 @@ $ ../src/confctl -a v
 > varia.1.2.3.6=
 > varia.1.2.meh=
 > varia.1.2.moo=
+> varia.slashed./var=/val
+> varia.slashed.no_val=
+> varia.slashed.slash_in_value=foo / bar
+> varia.slashed.quoted_slash="foo / bar"
+> varia.slashed.squoted_slash='foo / bar'
+> varia.slashed.spaced=foo / / bar
 
 $ ../src/confctl -w varia.x=new-x -w varia.z=new-z -w varia.new-var=meh -w outside-of-1=wzium v
 $ cat v
@@ -64,6 +70,16 @@ $ cat v
 > 			moo
 > 
 > 		} # comment after 2
+> 	}
+> 
+> 	slashed {
+> 		// Test for handling "// comments"
+> 		/var /val//comment
+> 		no_val //comment
+> 		slash_in_value foo / bar
+> 		quoted_slash "foo / bar"
+> 		squoted_slash 'foo / bar' // boring
+> 		spaced foo / / bar
 > 	}
 > 	new-var meh
 > 

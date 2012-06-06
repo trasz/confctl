@@ -173,14 +173,13 @@ buf_read_before(FILE *fp)
 			break;
 		if (ferror(fp) != 0)
 			err(1, "getc");
-		if (no_newline && (ch == '\n' || ch == '\r')) {
-			ch = ungetc(ch, fp);
-			if (ch == EOF)
-				err(1, "ungetc");
-			break;
-		}
-		if (ch != '/')
+		if (no_newline && (ch == '\n' || ch == '\r'))
+			goto unget;
+		if (ch != '/') {
+			if (slashed)
+				goto unget;
 			slashed = false;
+		}
 		if (comment) {
 			if (ch == '\n' || ch == '\r')
 				comment = false;
@@ -218,6 +217,7 @@ buf_read_before(FILE *fp)
 			buf_append(b, ch);
 			continue;
 		}
+unget:
 		ch = ungetc(ch, fp);
 		if (ch == EOF)
 			err(1, "ungetc");
@@ -478,8 +478,11 @@ buf_read_after(FILE *fp)
 			break;
 		if (ferror(fp) != 0)
 			err(1, "getc");
-		if (ch != '/')
+		if (ch != '/') {
+			if (slashed)
+				goto unget;
 			slashed = false;
+		}
 		if (ch == '\n' || ch == '\r') {
 			ch = ungetc(ch, fp);
 			if (ch == EOF)
@@ -511,6 +514,7 @@ buf_read_after(FILE *fp)
 			buf_append(b, ch);
 			continue;
 		}
+unget:
 		ch = ungetc(ch, fp);
 		if (ch == EOF)
 			err(1, "ungetc");
