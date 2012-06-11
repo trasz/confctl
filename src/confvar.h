@@ -36,6 +36,7 @@ void		confvar_save(struct confvar *cv, const char *path, bool in_place);
 void		confvar_print_c(struct confvar *cv, FILE *fp);
 void		confvar_print_lines(struct confvar *cv, FILE *fp, bool values_only);
 void		confvar_merge(struct confvar **cvp, struct confvar *merge);
+void		confvar_remove(struct confvar *cv, struct confvar *remove);
 void		confvar_filter(struct confvar *cv, struct confvar *filter);
 
 #endif /* !CONFVAR_H */

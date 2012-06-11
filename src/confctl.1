@@ -16,6 +16,10 @@ confctl \- sysctl-like tool for config files
 .B confctl [-I] -w
 .I variable-name=value
 .I config-file
+.br
+.B confctl [-I] -x
+.I variable-name
+.I config-file
 .SH DESCRIPTION
 .B confctl
 provides access to configuration files in C-like syntax
@@ -31,7 +35,9 @@ Show only values, not names.
 .IP -w
 Change value of configuration variable and update the configuration
 file.
-Variable is create if it doesn't yet exist.
+Variable is created if it doesn't yet exist.
+.IP -x
+Delete the variable and update the configuration file.
 .IP -I
 Instead of writing a temporary file and then atomically replacing
 the configuration file, rewrite it in place.

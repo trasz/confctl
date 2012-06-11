@@ -131,7 +131,6 @@ buf_dup(const struct buf *b)
 	return (buf_new_from_str(b->b_buf));
 }
 
-#if 0
 static void
 buf_delete(struct buf *b)
 {
@@ -142,7 +141,6 @@ buf_delete(struct buf *b)
 		free(b->b_buf);
 	free(b);
 }
-#endif
 
 static struct confvar *
 cv_new(struct confvar *parent, struct buf *name)
@@ -178,7 +176,6 @@ cv_new_root(void)
 	return (cv);
 }
 
-#if 0
 static void
 cv_delete(struct confvar *cv)
 {
@@ -196,7 +193,6 @@ cv_delete(struct confvar *cv)
 	if (cv->cv_parent != NULL)
 		TAILQ_REMOVE(&cv->cv_parent->cv_children, cv, cv_next);
 }
-#endif
 
 static struct buf *
 buf_read_before(FILE *fp)
@@ -1000,6 +996,27 @@ confvar_merge(struct confvar **cvp, struct confvar *merge)
 	 */
 	cv_merge_existing(*cvp, merge);
 	cv_merge_new(*cvp, merge);
+}
+
+void
+confvar_remove(struct confvar *cv, struct confvar *remove)
+{
+	struct confvar *child, *removechild, *tmp;
+
+	if (remove->cv_value != NULL)
+		errx(1, "variable to remove must not specify a value");
+
+	if (strcmp(remove->cv_name->b_buf, cv->cv_name->b_buf) != 0)
+		return;
+
+	if (TAILQ_EMPTY(&remove->cv_children)) {
+		cv_delete(cv);
+	} else {
+		TAILQ_FOREACH_SAFE(child, &cv->cv_children, cv_next, tmp) {
+			TAILQ_FOREACH(removechild, &remove->cv_children, cv_next)
+				confvar_remove(child, removechild);
+		}
+	}
 }
 
 static bool

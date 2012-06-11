@@ -39,6 +39,7 @@ usage(void)
 	fprintf(stderr, "usage: confctl [-n] config-path [name...]\n");
 	fprintf(stderr, "       confctl [-an] config-path\n");
 	fprintf(stderr, "       confctl [-I] -w name=value config-path\n");
+	fprintf(stderr, "       confctl [-I] -x name config-path\n");
 	exit(1);
 }
 
@@ -47,12 +48,12 @@ main(int argc, char **argv)
 {
 	int ch, i;
 	bool aflag = false, Iflag = false, nflag = false;
-	struct confvar *root, *cv, *filter = NULL, *merge = NULL;
+	struct confvar *root, *cv, *filter = NULL, *merge = NULL, *remove = NULL;
 
 	if (argc <= 1)
 		usage();
 
-	while ((ch = getopt(argc, argv, "aInw:")) != -1) {
+	while ((ch = getopt(argc, argv, "aInw:x:")) != -1) {
 		switch (ch) {
 		case 'a':
 			aflag = true;
@@ -67,6 +68,10 @@ main(int argc, char **argv)
 			cv = confvar_from_line(optarg);
 			confvar_merge(&merge, cv);
 			break;
+		case 'x':
+			cv = confvar_from_line(optarg);
+			confvar_merge(&remove, cv);
+			break;
 		case '?':
 		default:
 			usage();
@@ -79,19 +84,25 @@ main(int argc, char **argv)
 		errx(1, "missing config file path");
 	if (merge && argc > 1)
 		errx(1, "-w and variable names are mutually exclusive");
+	if (remove && argc > 1)
+		errx(1, "-x and variable names are mutually exclusive");
 	if (aflag && merge)
 		errx(1, "-a and -w are mutually exclusive");
+	if (aflag && remove)
+		errx(1, "-a and -x are mutually exclusive");
 	if (nflag && merge)
 		errx(1, "-n and -w are mutually exclusive");
-	if (Iflag && !merge)
-		errx(1, "-I can only be used with -w");
+	if (nflag && merge)
+		errx(1, "-n and -x are mutually exclusive");
+	if (Iflag && !merge && !remove)
+		errx(1, "-I can only be used with -w and -x");
 	if (aflag && argc > 1)
 		errx(1, "-a and variable names are mutually exclusive");
-	if (!aflag && !merge && argc == 1)
-		errx(1, "neither -a or variable names specified");
+	if (!aflag && !merge && !remove && argc == 1)
+		errx(1, "neither -a, -w, -x, or variable names specified");
 
 	root = confvar_load(argv[0]);
-	if (merge == NULL) {
+	if (merge == NULL && remove == NULL) {
 		if (!aflag) {
 			for (i = 1; i < argc; i++) {
 				cv = confvar_from_line(argv[i]);
@@ -101,7 +112,19 @@ main(int argc, char **argv)
 		}
 		confvar_print_lines(root, stdout, nflag);
 	} else {
-		confvar_merge(&root, merge);
+		/*
+		 * We're not using confvar_filter() mechanism,
+		 * because we really want to remove the nodes here,
+		 * so that we can e.g. replace them by using -x
+		 * and -w together.  Also, confvar_filter() works
+		 * the other way around, exposing selected nodes
+		 * and hiding all the rest; we would need to 'invert'
+		 * the filter somehow.
+		 */
+		if (remove != NULL)
+			confvar_remove(root, remove);
+		if (merge != NULL)
+			confvar_merge(&root, merge);
 		confvar_save(root, argv[0], Iflag);
 	}
 
