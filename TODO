@@ -2,19 +2,20 @@ Things to do before calling it done:
 
  - properly bail out on EOF without closing curly brackets.
 
- - Handle escaping and quoting in printing routines
+ - Handle escaping and quoting in printing routines.
 
- - Support syntax like this: 'whatever "name" { some stuff }'
+ - Support syntax like this: 'whatever "name" { some stuff }'.
 
- - Support appending semicolons to newly added entries
+ - Support appending semicolons to newly added entries.
 
- - Handle 'var = value' syntax.  This requires mimicking cv_middle from existing
-   entries
+ - Handle 'var = value' syntax when adding new variables.
+   This requires mimicking cv_middle from existing entries.
 
- - Handle semicolons at the end.  This requires mimicking cv_after from existing
-   entries.
+ - Handle semicolons at the end when adding new variables.
+   This requires mimicking cv_after from existing entries.
 
- - Add modification regression tests to jail.test.
+ - Add modification regression tests to jail.test (depends
+   on above two items).
 
  - Consider rewriting the parser using regexps; it's getting complicated.
 
