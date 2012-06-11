@@ -124,6 +124,26 @@ buf_print(struct buf *b, FILE *fp)
 		err(1, "fwrite");
 }
 
+static struct buf *
+buf_dup(const struct buf *b)
+{
+
+	return (buf_new_from_str(b->b_buf));
+}
+
+#if 0
+static void
+buf_delete(struct buf *b)
+{
+
+	if (b == NULL)
+		return;
+	if (b->b_buf != NULL)
+		free(b->b_buf);
+	free(b);
+}
+#endif
+
 static struct confvar *
 cv_new(struct confvar *parent, struct buf *name)
 {
@@ -157,6 +177,26 @@ cv_new_root(void)
 
 	return (cv);
 }
+
+#if 0
+static void
+cv_delete(struct confvar *cv)
+{
+	struct confvar *child;
+
+	TAILQ_FOREACH(child, &cv->cv_children, cv_next)
+		cv_delete(child);
+
+	buf_delete(cv->cv_before);
+	buf_delete(cv->cv_name);
+	buf_delete(cv->cv_middle);
+	buf_delete(cv->cv_value);
+	buf_delete(cv->cv_after);
+
+	if (cv->cv_parent != NULL)
+		TAILQ_REMOVE(&cv->cv_parent->cv_children, cv, cv_next);
+}
+#endif
 
 static struct buf *
 buf_read_before(FILE *fp)
@@ -880,6 +920,34 @@ cv_reindent(struct confvar *cv)
 }
 
 static void
+cv_merge_existing(struct confvar *cv, struct confvar *newcv)
+{
+	struct confvar *child, *newchild, *tmp, *newtmp;
+
+	if (strcmp(cv->cv_name->b_buf, newcv->cv_name->b_buf) != 0)
+		return;
+
+	if (!cv_is_container(newcv)) {
+		if (cv_is_container(cv))
+			errx(1, "cannot replace container node with leaf node");
+		if (cv->cv_middle->b_len == 0)
+			cv->cv_middle = buf_dup(newcv->cv_middle);
+		cv->cv_value = buf_dup(newcv->cv_value);
+		/*
+		 * Mark the node as done, so that we won't try
+		 * to add it in cv_merge_new().
+		 */
+		newcv->cv_filtered_out = true;
+		return;
+	}
+
+	TAILQ_FOREACH_SAFE(newchild, &newcv->cv_children, cv_next, newtmp) {
+		TAILQ_FOREACH_SAFE(child, &cv->cv_children, cv_next, tmp)
+			cv_merge_existing(child, newchild);
+	}
+}
+
+static void
 cv_reparent(struct confvar *cv, struct confvar *parent)
 {
 
@@ -891,7 +959,7 @@ cv_reparent(struct confvar *cv, struct confvar *parent)
 }
 
 static bool
-cv_merge(struct confvar *cv, struct confvar *newcv)
+cv_merge_new(struct confvar *cv, struct confvar *newcv)
 {
 	struct confvar *child, *newchild, *tmp, *newtmp;
 	bool found;
@@ -899,19 +967,13 @@ cv_merge(struct confvar *cv, struct confvar *newcv)
 	if (strcmp(cv->cv_name->b_buf, newcv->cv_name->b_buf) != 0)
 		return (false);
 
-	if (TAILQ_EMPTY(&newcv->cv_children)) {
-		if (cv->cv_middle->b_len == 0)
-			cv->cv_middle = newcv->cv_middle;
-		cv->cv_value = newcv->cv_value;
-		TAILQ_FOREACH_SAFE(newchild, &newcv->cv_children, cv_next, newtmp)
-			cv_reparent(newchild, cv);
+	if (newcv->cv_filtered_out)
 		return (true);
-	}
 
 	TAILQ_FOREACH_SAFE(newchild, &newcv->cv_children, cv_next, newtmp) {
 		found = false;
 		TAILQ_FOREACH_SAFE(child, &cv->cv_children, cv_next, tmp) {
-			found = cv_merge(child, newchild);
+			found = cv_merge_new(child, newchild);
 			if (found)
 				break;
 		}
@@ -925,13 +987,19 @@ cv_merge(struct confvar *cv, struct confvar *newcv)
 void
 confvar_merge(struct confvar **cvp, struct confvar *merge)
 {
-	bool found;
 
 	if (*cvp == NULL)
 		*cvp = cv_new_root();
 
-	found = cv_merge(*cvp, merge);
-	assert(found);
+	/*
+	 * Reason for doing it in two steps is that we need
+	 * to correctly handle duplicate nodes, such as this:
+	 * "1 { foo } 2 { bar } 1 { baz }".  In this case,
+	 * when merging '1.baz', we want to update the existing
+	 * node, not add a new sibling to "foo".
+	 */
+	cv_merge_existing(*cvp, merge);
+	cv_merge_new(*cvp, merge);
 }
 
 static bool
