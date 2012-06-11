@@ -46,19 +46,16 @@ int
 main(int argc, char **argv)
 {
 	int ch, i;
-	bool cflag = false, aflag = false, Iflag = false, nflag = false;
+	bool aflag = false, Iflag = false, nflag = false;
 	struct confvar *root, *cv, *filter = NULL, *merge = NULL;
 
 	if (argc <= 1)
 		usage();
 
-	while ((ch = getopt(argc, argv, "acInw:")) != -1) {
+	while ((ch = getopt(argc, argv, "aInw:")) != -1) {
 		switch (ch) {
 		case 'a':
 			aflag = true;
-			break;
-		case 'c':
-			cflag = true;
 			break;
 		case 'I':
 			Iflag = true;
@@ -88,8 +85,6 @@ main(int argc, char **argv)
 		errx(1, "-n and -w are mutually exclusive");
 	if (Iflag && !merge)
 		errx(1, "-I can only be used with -w");
-	if (nflag && cflag)
-		errx(1, "-n and -c are mutually exclusive");
 	if (aflag && argc > 1)
 		errx(1, "-a and variable names are mutually exclusive");
 	if (!aflag && !merge && argc == 1)
@@ -104,16 +99,10 @@ main(int argc, char **argv)
 			}
 			confvar_filter(root, filter);
 		}
-		if (cflag)
-			confvar_print_c(root, stdout);
-		else
-			confvar_print_lines(root, stdout, nflag);
+		confvar_print_lines(root, stdout, nflag);
 	} else {
 		confvar_merge(&root, merge);
-		if (cflag)
-			confvar_print_c(root, stdout);
-		else
-			confvar_save(root, argv[0], Iflag);
+		confvar_save(root, argv[0], Iflag);
 	}
 
 	return (0);
