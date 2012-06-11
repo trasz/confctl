@@ -272,7 +272,7 @@ buf_read_name(FILE *fp)
 			buf_append(b, ch);
 			continue;
 		}
-		if (isspace(ch) || ch == '#' || ch == ';' || ch == '{' || ch == '}') {
+		if (isspace(ch) || ch == '#' || ch == ';' || ch == '{' || ch == '}' || ch == '=') {
 			ch = ungetc(ch, fp);
 			if (ch == EOF)
 				err(1, "ungetc");
