@@ -597,6 +597,19 @@ cv_load(struct confvar *parent, FILE *fp)
 	bool closing_bracket, opening_bracket;
 	struct confvar *cv;
 
+	/*
+	 * There are three cases here:
+	 *
+	 * 1. "         variable          variable_value  # a comment"
+	 *    |<before>||<name>||<middle>||<-- value ->||<- after ->|
+	 *
+	 * 2. "         variable         {             some_stuff ...
+	 *    |<before>||<name>||<middle>||< before2 >||<name2 >|
+	 *
+	 * 3. "         variable          whatever_else    {      some_stuff ...
+	 *    |<before>||<name>||<middle>||<- name2 ->||<middle2>||<name3 >|
+	 */
+
 	before = buf_read_before(fp);
 	name = buf_read_name(fp);
 
@@ -613,21 +626,49 @@ cv_load(struct confvar *parent, FILE *fp)
 	}
 
 	cv = cv_new(parent, name);
+	cv->cv_before = before;
+	cv->cv_middle = middle;
+
 	if (opening_bracket) {
+		/*
+		 * Case 2 - opening bracket after name.
+		 */
 		for (;;) {
 			closing_bracket = cv_load(cv, fp);
 			if (closing_bracket)
 				break;
 		}
 	} else {
+		/*
+		 * Case 1 or 3.
+		 */
 		value = buf_read_value(fp);
-		cv->cv_value = value;
 		after = buf_read_after(fp);
-		cv->cv_after = after;
-	}
+		opening_bracket = read_bracket(fp);
+		if (opening_bracket) {
+			/*
+			 * Case 3.
+			 */
+			buf_append(after, '{');
+			buf_finish(after);
 
-	cv->cv_before = before;
-	cv->cv_middle = middle;
+			cv = cv_new(cv, name);
+			cv->cv_name = value;
+			cv->cv_middle = after;
+
+			for (;;) {
+				closing_bracket = cv_load(cv, fp);
+				if (closing_bracket)
+					break;
+			}
+		} else {
+			/*
+			 * Case 1.
+			 */
+			cv->cv_value = value;
+			cv->cv_after = after;
+		}
+	}
 
 	return (false);
 }

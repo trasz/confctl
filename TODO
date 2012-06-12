@@ -19,3 +19,5 @@ Things to do before calling it done:
 
  - We probably should use unvis(3) in confvar_from_line().
 
+ - Handle zero-length names ("var val; { meh }").
+
