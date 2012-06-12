@@ -1,6 +1,8 @@
 Things to do before 1.0:
 
- - Support syntax like this: 'whatever "name" { some stuff }'.
+ - Bring back '// comments', perhaps by adding an option to enable them.
+
+ - Handle zero-length names ("var val; { meh }").
 
 Things to do before calling it done:
 
@@ -18,8 +20,4 @@ Things to do before calling it done:
  - Consider rewriting the parser using regexps; it's getting complicated.
 
  - We probably should use unvis(3) in confvar_from_line().
-
- - Handle zero-length names ("var val; { meh }").
-
- - Bring back '// comments', perhaps by adding an option to enable them.
 

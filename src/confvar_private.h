@@ -49,7 +49,8 @@ struct confvar {
 	struct buf		*cv_value;
 	struct buf		*cv_after;
 	struct confvar		*cv_parent;
-	bool			cv_filtered_out;
+	bool			cv_filtered_out:1;
+	bool			cv_delete_when_empty:1;
 	TAILQ_HEAD(confvar_head, confvar)	cv_children;
 };
 

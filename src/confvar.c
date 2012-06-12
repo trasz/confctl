@@ -660,6 +660,14 @@ cv_load(struct confvar *parent, FILE *fp)
 			buf_append(after, '{');
 			buf_finish(after);
 
+			/*
+			 * Say we have this in the configuration
+			 * file: 'on a { whatever'.  When we do
+			 * "confctl -x on.a", we want to remove not
+			 * only the 'a' node, but also its parent,
+			 * 'on'.
+			 */
+			cv->cv_delete_when_empty = true;
 			cv = cv_new(cv, name);
 			cv->cv_name = value;
 			cv->cv_middle = after;
@@ -1087,6 +1095,9 @@ confvar_remove(struct confvar *cv, struct confvar *remove)
 				confvar_remove(child, removechild);
 		}
 	}
+
+	if (cv->cv_delete_when_empty && TAILQ_EMPTY(&cv->cv_children))
+		cv_delete(cv);
 }
 
 static bool
