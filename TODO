@@ -19,3 +19,5 @@ Things to do before calling it done:
 
  - Consider rewriting the parser using regexps; it's getting complicated.
 
+ - We probably should use unvis(3) in confvar_from_line().
+
