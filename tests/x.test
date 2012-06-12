@@ -1,0 +1,44 @@
+$ rm -f x
+$ cp x.conf x
+
+$ ../src/confctl -a x
+> 1.2.3.4.5=meh
+> 1.2.useless=
+> 1.x=
+> 1.2.3.4.5.foo=bar
+> 1.2.3.4.5.6.baz=
+
+$ ../src/confctl -x 1.2.3.4.5 -x 1.2.useless x
+$ cat x
+> 1 {
+> 	// Comment for 2.
+> 	2 {
+> 		3 {
+> 			4 {
+> 			}
+> 		}
+> 	}
+> 
+> 	x
+> 
+> 	2 {
+> 		3 {
+> 			4 {
+> 			}
+> 		}
+> 	}
+> }
+> 
+> 1 {
+> 	2 {
+> 		3 {
+> 			# comment for 4
+> 			4 {
+> 
+> 				# comment after 5
+> 			}
+> 		}
+> 	}
+> }
+
+$ rm -f x
