@@ -752,6 +752,16 @@ cv_print_c(struct confvar *cv, FILE *fp)
 	buf_print(cv->cv_after, fp);
 }
 
+void
+confvar_print_c(struct confvar *cv, FILE *fp)
+{
+	struct confvar *child;
+
+	TAILQ_FOREACH(child, &cv->cv_children, cv_next)
+		cv_print_c(child, fp);
+	buf_print(cv->cv_after, fp);
+}
+
 static void
 cv_print_lines(struct confvar *cv, FILE *fp, const char *prefix, bool values_only)
 {
@@ -778,16 +788,6 @@ cv_print_lines(struct confvar *cv, FILE *fp, const char *prefix, bool values_onl
 			fprintf(fp, "%s.%s=%s\n", prefix, cv_name(cv), cv_value(cv));
 		else
 			fprintf(fp, "%s=%s\n", cv_name(cv), cv_value(cv));
-}
-
-void
-confvar_print_c(struct confvar *cv, FILE *fp)
-{
-	struct confvar *child;
-
-	TAILQ_FOREACH(child, &cv->cv_children, cv_next)
-		cv_print_c(child, fp);
-	buf_print(cv->cv_after, fp);
 }
 
 void
