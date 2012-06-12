@@ -12,7 +12,7 @@ AC_PROG_CC
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([err.h])
+AC_CHECK_HEADERS([err.h vis.h])
 
 AC_CONFIG_FILES([Makefile src/Makefile])
 AC_OUTPUT

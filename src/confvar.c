@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <vis.h>
 
 #include "queue.h"
 
@@ -122,6 +123,19 @@ buf_print(struct buf *b, FILE *fp)
 	written = fwrite(b->b_buf, b->b_len, 1, fp);
 	if (written != 1)
 		err(1, "fwrite");
+}
+
+static char *
+buf_vis(struct buf *b)
+{
+	char *dst;
+
+	dst = malloc(b->b_len * 4 + 1);
+	if (dst == NULL)
+		err(1, "malloc");
+	strvis(dst, b->b_buf, VIS_NL | VIS_CSTYLE);
+
+	return (dst);
 }
 
 static struct buf *
@@ -717,24 +731,6 @@ cv_is_container(const struct confvar *cv)
 	return (false);
 }
 
-static const char *
-cv_name(const struct confvar *cv)
-{
-
-	assert(cv->cv_name != NULL);
-	assert(cv->cv_name->b_buf != NULL);
-	return (cv->cv_name->b_buf);
-}
-
-static const char *
-cv_value(const struct confvar *cv)
-{
-
-	assert(cv->cv_value != NULL);
-	assert(cv->cv_value->b_buf != NULL);
-	return (cv->cv_value->b_buf);
-}
-
 static void
 cv_print_c(struct confvar *cv, FILE *fp)
 {
@@ -766,28 +762,37 @@ static void
 cv_print_lines(struct confvar *cv, FILE *fp, const char *prefix, bool values_only)
 {
 	struct confvar *child;
-	char *newprefix;
+	char *newprefix, *name, *value;
 
 	if (cv->cv_filtered_out)
 		return;
 
 	if (cv_is_container(cv)) {
+		name = buf_vis(cv->cv_name);
 		if (prefix != NULL)
-			asprintf(&newprefix, "%s.%s", prefix, cv_name(cv));
+			asprintf(&newprefix, "%s.%s", prefix, name);
 		else
-			asprintf(&newprefix, "%s", cv_name(cv));
+			asprintf(&newprefix, "%s", name);
+		free(name);
 		if (newprefix == NULL)
 			err(1, "asprintf");
 		TAILQ_FOREACH(child, &cv->cv_children, cv_next)
 			cv_print_lines(child, fp, newprefix, values_only);
 		free(newprefix);
-	} else
-		if (values_only)
-			fprintf(fp, "%s\n", cv_value(cv));
-		else if (prefix != NULL)
-			fprintf(fp, "%s.%s=%s\n", prefix, cv_name(cv), cv_value(cv));
-		else
-			fprintf(fp, "%s=%s\n", cv_name(cv), cv_value(cv));
+	} else {
+		value = buf_vis(cv->cv_value);
+		if (values_only) {
+			fprintf(fp, "%s\n", value);
+		} else {
+			name = buf_vis(cv->cv_name);
+			if (prefix != NULL)
+				fprintf(fp, "%s.%s=%s\n", prefix, name, value);
+			else
+				fprintf(fp, "%s=%s\n", name, value);
+			free(name);
+		}
+		free(value);
+	}
 }
 
 void

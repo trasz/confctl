@@ -19,5 +19,3 @@ Things to do before calling it done:
 
  - Consider rewriting the parser using regexps; it's getting complicated.
 
- - Handle newlines in names or values in a sane way, perhaps by escaping them.
-
