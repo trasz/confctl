@@ -89,7 +89,7 @@ buf_last(struct buf *b)
 	return (ch);
 }
 
-static char
+static void
 buf_strip(struct buf *b)
 {
 
