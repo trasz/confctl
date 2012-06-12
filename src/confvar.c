@@ -241,6 +241,7 @@ buf_read_before(FILE *fp)
 			buf_append(b, ch);
 			continue;
 		}
+#ifdef SLASH_SLASH
 		/*
 		 * Handle "// comments".
 		 */
@@ -253,6 +254,7 @@ buf_read_before(FILE *fp)
 			buf_append(b, ch);
 			continue;
 		}
+#endif
 		/*
 		 * This is somewhat tricky - this piece of code is also used
 		 * to parse junk that will become cv_after of the parent
@@ -289,7 +291,7 @@ buf_read_name(FILE *fp)
 {
 	int ch;
 	struct buf *b;
-	bool escaped = false, quoted = false, squoted = false, slashed = false;;
+	bool escaped = false, quoted = false, squoted = false, slashed = false;
 
 	b = buf_new();
 
@@ -328,6 +330,7 @@ buf_read_name(FILE *fp)
 				err(1, "ungetc");
 			break;
 		}
+#ifdef SLASH_SLASH
 		/*
 		 * Handle "// comments".
 		 */
@@ -344,6 +347,7 @@ buf_read_name(FILE *fp)
 			}
 			slashed = true;
 		}
+#endif
 		buf_append(b, ch);
 	}
 	buf_finish(b);
@@ -495,8 +499,10 @@ buf_read_value(FILE *fp)
 			}
 			break;
 		}
+#ifdef SLASH_SLASH
 		if (ch == '/')
 			slashed = true;
+#endif
 		buf_append(b, ch);
 	}
 	buf_finish(b);
@@ -509,7 +515,7 @@ buf_read_after(FILE *fp)
 {
 	int ch;
 	struct buf *b;
-	bool comment = false, slashed = false;;
+	bool comment = false, slashed = false;
 
 	b = buf_new();
 
@@ -539,6 +545,7 @@ buf_read_after(FILE *fp)
 			buf_append(b, ch);
 			continue;
 		}
+#ifdef SLASH_SLASH
 		/*
 		 * Handle "// comments".
 		 */
@@ -551,6 +558,7 @@ buf_read_after(FILE *fp)
 			buf_append(b, ch);
 			continue;
 		}
+#endif
 		if (isspace(ch) || ch == ';') {
 			buf_append(b, ch);
 			continue;

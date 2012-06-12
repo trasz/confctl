@@ -1,0 +1,28 @@
+$ rm -f d
+$ cp doubleslash.conf d
+
+$ ../src/confctl -a d
+> double.slashed./var=/val
+> double.slashed.no_val=
+> double.slashed.slash_in_value=foo / bar
+> double.slashed.quoted_slash="foo / bar"
+> double.slashed.squoted_slash='foo / bar'
+> double.slashed.spaced=foo / / bar
+
+$ ../src/confctl -w double.x=new-x -w double.z=new-z -w double.new-var=meh -w outside-of-1=wzium d
+$ cat d
+> double {
+> 	slashed {
+> 		// Test for handling "// comments"
+> 		/var /val//comment
+> 		no_val //comment
+> 		slash_in_value foo / bar
+> 		quoted_slash "foo / bar"
+> 		squoted_slash 'foo / bar' // boring
+> 		spaced foo / / bar
+> 	}
+> 	new-var meh
+> }
+> outside-of-1 wzium
+
+$ rm -f d

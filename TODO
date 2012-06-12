@@ -21,3 +21,5 @@ Things to do before calling it done:
 
  - Handle zero-length names ("var val; { meh }").
 
+ - Bring back '// comments', perhaps by adding an option to enable them.
+
