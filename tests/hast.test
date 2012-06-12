@@ -1,0 +1,73 @@
+$ rm -f h
+$ cp hast.conf h
+
+$ ../src/confctl -a h
+> listen=tcp://0.0.0.0
+> on.hasta.listen=tcp://2001:db8::1/64
+> on.hastb.listen=tcp://2001:db8::2/64
+> resource.shared.local=/dev/da0
+> resource.shared.on.hasta.remote=tcp://10.0.0.2
+> resource.shared.on.hastb.remote=tcp://10.0.0.1
+> resource.tank.on.hasta.local=/dev/mirror/tanka
+> resource.tank.on.hasta.source=tcp://10.0.0.1
+> resource.tank.on.hasta.remote=tcp://10.0.0.2
+> resource.tank.on.hastb.local=/dev/mirror/tankb
+> resource.tank.on.hastb.source=tcp://10.0.0.2
+> resource.tank.on.hastb.remote=tcp://10.0.0.1
+
+$ ../src/confctl -w resource.shared.local=/dev/da1 h
+$ ../src/confctl h resource.shared
+> resource.shared.local=/dev/da1
+> resource.shared.on.hasta.remote=tcp://10.0.0.2
+> resource.shared.on.hastb.remote=tcp://10.0.0.1
+
+$ ../src/confctl -x resource.tank.on.hasta h
+
+$ ../src/confctl -a h
+> listen=tcp://0.0.0.0
+> on.hasta.listen=tcp://2001:db8::1/64
+> on.hastb.listen=tcp://2001:db8::2/64
+> resource.shared.local=/dev/da1
+> resource.shared.on.hasta.remote=tcp://10.0.0.2
+> resource.shared.on.hastb.remote=tcp://10.0.0.1
+> resource.tank.on.hastb.local=/dev/mirror/tankb
+> resource.tank.on.hastb.source=tcp://10.0.0.2
+> resource.tank.on.hastb.remote=tcp://10.0.0.1
+
+$ cat h
+> # hastd(8) and hastctl(8) configuration file.
+> 
+> listen tcp://0.0.0.0
+> 
+> on hasta {
+>    # Listen here.
+>    listen tcp://2001:db8::1/64
+> }
+> on hastb {
+>    listen tcp://2001:db8::2/64
+> }
+> 
+> resource shared {
+>    local /dev/da1
+> 
+>    on hasta {
+> 	   remote tcp://10.0.0.2
+>    }
+>    on hastb {
+> 	   remote tcp://10.0.0.1
+>    }
+> }
+> 
+> # Configuration for 'tank'.
+> resource tank {
+>    # But not this one.
+>    on hastb {
+> 	   local /dev/mirror/tankb
+> 	   source tcp://10.0.0.2
+> 	   remote tcp://10.0.0.1# Remote.
+>    }
+> }
+> 
+> # Btw, HAST rocks :-)
+
+$ rm -f h
