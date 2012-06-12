@@ -6,8 +6,6 @@ Things to do before calling it done:
 
  - properly bail out on EOF without closing curly brackets.
 
- - Handle escaping and quoting in printing routines.
-
  - Handle 'var = value' syntax when adding new variables.
    This requires mimicking cv_middle from existing entries.
 
