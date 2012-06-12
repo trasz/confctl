@@ -352,13 +352,11 @@ buf_read_name(FILE *fp)
 }
 
 static struct buf *
-buf_read_middle(FILE *fp, bool *opening_bracket)
+buf_read_middle(FILE *fp)
 {
 	int ch;
 	struct buf *b;
 	bool escaped = false;
-
-	*opening_bracket = false;
 
 	b = buf_new();
 
@@ -416,11 +414,6 @@ buf_read_middle(FILE *fp, bool *opening_bracket)
 				if (ch == EOF)
 					err(1, "ungetc");
 			}
-			break;
-		}
-		if (ch == '{') {
-			*opening_bracket = true;
-			buf_append(b, ch);
 			break;
 		}
 		if (isspace(ch) || ch == '=') {
@@ -580,6 +573,24 @@ unget:
 }
 
 static bool
+read_bracket(FILE *fp)
+{
+	int ch;
+
+	ch = getc(fp);
+	if (feof(fp) != 0)
+		return (false);
+	if (ferror(fp) != 0)
+		err(1, "getc");
+	if (ch == '{')
+		return (true);
+	ch = ungetc(ch, fp);
+	if (ch == EOF)
+		err(1, "ungetc");
+	return (false);
+}
+
+static bool
 cv_load(struct confvar *parent, FILE *fp)
 {
 	struct buf *before, *name, *middle, *value, *after;
@@ -594,7 +605,12 @@ cv_load(struct confvar *parent, FILE *fp)
 		return (true);
 	}
 
-	middle = buf_read_middle(fp, &opening_bracket);
+	middle = buf_read_middle(fp);
+	opening_bracket = read_bracket(fp);
+	if (opening_bracket) {
+		buf_append(middle, '{');
+		buf_finish(middle);
+	}
 
 	cv = cv_new(parent, name);
 	if (opening_bracket) {
