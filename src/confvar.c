@@ -291,7 +291,11 @@ buf_read_name(FILE *fp)
 {
 	int ch;
 	struct buf *b;
+#ifdef SLASH_SLASH
 	bool escaped = false, quoted = false, squoted = false, slashed = false;
+#else
+	bool escaped = false, quoted = false, squoted = false;
+#endif
 
 	b = buf_new();
 
@@ -309,8 +313,10 @@ buf_read_name(FILE *fp)
 			escaped = false;
 			continue;
 		}
+#ifdef SLASH_SLASH
 		if (ch != '/')
 			slashed = false;
+#endif
 		if (ch == '\\') {
 			escaped = true;
 			buf_append(b, ch);
