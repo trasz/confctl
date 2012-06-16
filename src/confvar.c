@@ -223,7 +223,7 @@ buf_read_before(FILE *fp)
 			break;
 		if (ferror(fp) != 0)
 			err(1, "getc");
-		if (no_newline && (ch == '\n' || ch == '\r'))
+		if (no_newline && (ch == '\n' || ch == '\r' || ch == '}'))
 			goto unget;
 		if (ch != '/') {
 			if (slashed)
