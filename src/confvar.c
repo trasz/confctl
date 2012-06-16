@@ -901,8 +901,6 @@ confvar_from_line(const char *line)
 	for (i = 0;; i++) {
 		ch = line[i];
 		if (ch == '\0') {
-			if (b->b_len == 0)
-				errx(1, "empty name at the end of the line");
 			buf_finish(b);
 			cv = cv_new(parent, b);
 			cv->cv_middle = buf_new_from_str(" ");
@@ -926,8 +924,6 @@ confvar_from_line(const char *line)
 			continue;
 		}
 		if (ch == '.' || ch == '=') {
-			if (b->b_len == 0)
-				errx(1, "empty name");
 			buf_finish(b);
 			cv = cv_new(parent, b);
 			cv->cv_middle = buf_new_from_str(" ");
