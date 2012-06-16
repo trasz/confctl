@@ -166,7 +166,6 @@ cv_new(struct confvar *parent, struct buf *name)
 		err(1, "malloc");
 
 	assert(name != NULL);
-	assert(name->b_len > 0);
 
 	if (parent != NULL) {
 		assert(parent->cv_value == NULL);
@@ -209,18 +208,22 @@ cv_delete(struct confvar *cv)
 }
 
 static struct buf *
-buf_read_before(FILE *fp)
+buf_read_before(FILE *fp, bool *closing_bracket)
 {
 	int ch;
 	struct buf *b;
 	bool comment = false, no_newline = false, slashed = false;
 
+	*closing_bracket = false;
+
 	b = buf_new();
 
 	for (;;) {
 		ch = getc(fp);
-		if (feof(fp) != 0)
+		if (feof(fp) != 0) {
+			*closing_bracket = true;
 			break;
+		}
 		if (ferror(fp) != 0)
 			err(1, "getc");
 		if (no_newline && (ch == '\n' || ch == '\r' || ch == '}'))
@@ -262,6 +265,7 @@ buf_read_before(FILE *fp)
 		 */
 		if (ch == '}') {
 			no_newline = true;
+			*closing_bracket = true;
 			buf_append(b, ch);
 			continue;
 		}
@@ -624,14 +628,13 @@ cv_load(struct confvar *parent, FILE *fp)
 	 *    |<before>||<name>||<middle>||<- name2 ->||<middle2>||<name3 >|
 	 */
 
-	before = buf_read_before(fp);
-	name = buf_read_name(fp);
-
-	if (name->b_len == 0) {
+	before = buf_read_before(fp, &closing_bracket);
+	if (closing_bracket) {
 		parent->cv_after = before;
 		return (true);
 	}
 
+	name = buf_read_name(fp);
 	middle = buf_read_middle(fp);
 	opening_bracket = read_bracket(fp);
 	if (opening_bracket) {
