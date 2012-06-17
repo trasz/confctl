@@ -21,6 +21,9 @@ $ ../src/confctl -a v
 > varia.1.2.3.6=
 > varia.1.2.meh=
 > varia.1.2.moo=
+> .var=val
+> ..meh=
+> .......xxx=
 
 $ ../src/confctl -w varia.x=new-x -w varia.z=new-z -w varia.new-var=meh -w outside-of-1=wzium v
 $ cat v
@@ -67,6 +70,12 @@ $ cat v
 > 
 > 	# nothing interesting here
 > 
+> }
+> 
+> # Who said there must always be a name?
+> {
+> 	var val; { meh }
+> 	{{{{{{ xxx }}}}}}
 > }
 > outside-of-1 wzium
 > 
