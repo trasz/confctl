@@ -220,12 +220,10 @@ buf_read_before(FILE *fp, bool *closing_bracket)
 
 	for (;;) {
 		ch = getc(fp);
-		if (feof(fp) != 0) {
+		if (ch == EOF) {
 			*closing_bracket = true;
 			break;
 		}
-		if (ferror(fp) != 0)
-			err(1, "getc");
 		if (no_newline && (ch == '\n' || ch == '\r' || ch == '}'))
 			goto unget;
 		if (ch != '/') {
@@ -305,13 +303,11 @@ buf_read_name(FILE *fp)
 
 	for (;;) {
 		ch = getc(fp);
-		if (feof(fp) != 0) {
+		if (ch == EOF) {
 			if (quoted || squoted)
 				errx(1, "premature end of file");
 			break;
 		}
-		if (ferror(fp) != 0)
-			err(1, "getc");
 		if (escaped) {
 			buf_append(b, ch);
 			escaped = false;
@@ -378,10 +374,8 @@ buf_read_middle(FILE *fp, bool *opening_bracket)
 
 	for (;;) {
 		ch = getc(fp);
-		if (feof(fp) != 0)
+		if (ch == EOF)
 			break;
-		if (ferror(fp) != 0)
-			err(1, "getc");
 		if (ch == '\\') {
 			escaped = true;
 			buf_append(b, ch);
@@ -464,13 +458,11 @@ buf_read_value(FILE *fp, bool *opening_bracket)
 
 	for (;;) {
 		ch = getc(fp);
-		if (feof(fp) != 0) {
+		if (ch == EOF) {
 			if (quoted || squoted)
 				errx(1, "premature end of file");
 			break;
 		}
-		if (ferror(fp) != 0)
-			err(1, "getc");
 		if (escaped) {
 			buf_append(b, ch);
 			escaped = false;
@@ -542,10 +534,8 @@ buf_read_after(FILE *fp)
 
 	for (;;) {
 		ch = getc(fp);
-		if (feof(fp) != 0)
+		if (ch == EOF)
 			break;
-		if (ferror(fp) != 0)
-			err(1, "getc");
 		if (ch != '/') {
 			if (slashed)
 				goto unget;
@@ -698,6 +688,8 @@ confvar_load(const char *path)
 	cv = cv_new_root();
 	for (;;) {
 		done = cv_load(cv, fp);
+		if (ferror(fp) != 0)
+			err(1, "read");
 		if (done)
 			break;
 	}
