@@ -1,7 +1,5 @@
 Things to do before 1.0:
 
- - Refactor error (feof()/ferror()) handling.
-
  - Test under OSX and Linux.
 
 Things to do before calling it done:
