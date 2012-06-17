@@ -366,11 +366,13 @@ buf_read_name(FILE *fp)
 }
 
 static struct buf *
-buf_read_middle(FILE *fp)
+buf_read_middle(FILE *fp, bool *opening_bracket)
 {
 	int ch;
 	struct buf *b;
 	bool escaped = false;
+
+	*opening_bracket = false;
 
 	b = buf_new();
 
@@ -434,6 +436,11 @@ buf_read_middle(FILE *fp)
 			buf_append(b, ch);
 			continue;
 		}
+		if (ch == '{' && *opening_bracket == false) {
+			*opening_bracket = true;
+			buf_append(b, ch);
+			continue;
+		}
 		ch = ungetc(ch, fp);
 		if (ch == EOF)
 			err(1, "ungetc");
@@ -445,11 +452,13 @@ buf_read_middle(FILE *fp)
 }
 
 static struct buf *
-buf_read_value(FILE *fp)
+buf_read_value(FILE *fp, bool *opening_bracket)
 {
 	int ch;
 	struct buf *b;
 	bool escaped = false, quoted = false, squoted = false, slashed = false;
+
+	*opening_bracket = false;
 
 	b = buf_new();
 
@@ -483,6 +492,8 @@ buf_read_value(FILE *fp)
 			continue;
 		}
 		if (ch == '\n' || ch == '\r' || ch == '#' || ch == ';' || ch == '{' || ch == '}' || (ch == '/' && slashed)) {
+			if (ch == '{')
+				*opening_bracket = true;
 			ch = ungetc(ch, fp);
 			if (ch == EOF)
 				err(1, "ungetc");
@@ -591,24 +602,6 @@ unget:
 }
 
 static bool
-read_bracket(FILE *fp)
-{
-	int ch;
-
-	ch = getc(fp);
-	if (feof(fp) != 0)
-		return (false);
-	if (ferror(fp) != 0)
-		err(1, "getc");
-	if (ch == '{')
-		return (true);
-	ch = ungetc(ch, fp);
-	if (ch == EOF)
-		err(1, "ungetc");
-	return (false);
-}
-
-static bool
 cv_load(struct confvar *parent, FILE *fp)
 {
 	struct buf *before, *name, *middle, *value, *after;
@@ -635,12 +628,7 @@ cv_load(struct confvar *parent, FILE *fp)
 	}
 
 	name = buf_read_name(fp);
-	middle = buf_read_middle(fp);
-	opening_bracket = read_bracket(fp);
-	if (opening_bracket) {
-		buf_append(middle, '{');
-		buf_finish(middle);
-	}
+	middle = buf_read_middle(fp, &opening_bracket);
 
 	cv = cv_new(parent, name);
 	cv->cv_before = before;
@@ -659,16 +647,11 @@ cv_load(struct confvar *parent, FILE *fp)
 		/*
 		 * Case 1 or 3.
 		 */
-		value = buf_read_value(fp);
-		after = buf_read_after(fp);
-		opening_bracket = read_bracket(fp);
+		value = buf_read_value(fp, &opening_bracket);
 		if (opening_bracket) {
 			/*
 			 * Case 3.
 			 */
-			buf_append(after, '{');
-			buf_finish(after);
-
 			/*
 			 * Say we have this in the configuration
 			 * file: 'on a { whatever'.  When we do
@@ -677,9 +660,11 @@ cv_load(struct confvar *parent, FILE *fp)
 			 * 'on'.
 			 */
 			cv->cv_delete_when_empty = true;
-			cv = cv_new(cv, name);
-			cv->cv_name = value;
-			cv->cv_middle = after;
+
+			middle = buf_read_middle(fp, &opening_bracket);
+			assert(opening_bracket);
+			cv = cv_new(cv, value);
+			cv->cv_middle = middle;
 
 			for (;;) {
 				closing_bracket = cv_load(cv, fp);
@@ -690,6 +675,7 @@ cv_load(struct confvar *parent, FILE *fp)
 			/*
 			 * Case 1.
 			 */
+			after = buf_read_after(fp);
 			cv->cv_value = value;
 			cv->cv_after = after;
 		}
