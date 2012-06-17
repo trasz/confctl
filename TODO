@@ -1,10 +1,12 @@
 Things to do before 1.0:
 
- - Bring back '// comments', perhaps by adding an option to enable them.
+ - Refactor error (feof()/ferror()) handling.
 
- - Handle zero-length names ("var val; { meh }").
+ - Test under OSX and Linux.
 
 Things to do before calling it done:
+
+ - Bring back '// comments', perhaps by adding an option to enable them.
 
  - properly bail out on EOF without closing curly brackets.
 
