@@ -1,19 +1,32 @@
-Things to do before calling it done:
+Things to do before 1.1:
 
- - Bring back '// comments', perhaps by adding an option to enable them.
+ - Make confvar.c a proper shared library.
 
- - properly bail out on EOF without closing curly brackets.
+ - Add an option (-C, perhaps), to recognize '//' as a comment.
 
- - Handle 'var = value' syntax when adding new variables.
-   This requires mimicking cv_middle from existing entries.
+ - Add an option (-E, perhaps) to use '=' as a separator between
+   name and value.  This requires mimicking cv_middle from existing
+   entries.
 
- - Handle semicolons at the end when adding new variables.
-   This requires mimicking cv_after from existing entries.
+ - Add an option (-S, perhaps) to use semicolon after entry.
+   This would also change the way line continuation works
+   ('variable\n value;' would be ok, without the need to escape
+   the newline).
 
  - Add modification regression tests to jail.test (depends
    on above two items).
 
+ - Use unvis(3) in confvar_from_line().
+
+Things to do before calling it done:
+
+ - Properly bail out on EOF without closing curly brackets.
+
  - Consider rewriting the parser using regexps; it's getting complicated.
 
- - We probably should use unvis(3) in confvar_from_line().
+ - Mimick cv_middle from existing entries, so that newly added
+   variables get a proper spacing between variable name and value.
+
+ - Mimick cv_after from existing entries, so that newly added
+   variables get a semicolon, if the rest of the file uses it.
 
