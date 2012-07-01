@@ -37,8 +37,8 @@
 
 #include "queue.h"
 
-#include "confvar.h"
-#include "confvar_private.h"
+#include "confctl.h"
+#include "confctl_private.h"
 
 static void	confctl_print_c(struct confctl *cc, FILE *fp);
 

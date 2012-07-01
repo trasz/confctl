@@ -31,7 +31,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "confvar.h"
+#include "confctl.h"
 
 static void
 usage(void)
