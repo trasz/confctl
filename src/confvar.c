@@ -139,6 +139,25 @@ buf_vis(struct buf *b)
 	return (dst);
 }
 
+static void
+buf_unvis(struct buf *b)
+{
+	char *dst;
+	int len;
+
+	dst = malloc(b->b_len + 1);
+	if (dst == NULL)
+		err(1, "malloc");
+	len = strunvis(dst, b->b_buf);
+	if (len < 0)
+		err(1, "invalid escape sequence");
+	assert(len <= b->b_allocated);
+	memcpy(b->b_buf, dst, len);
+	free(dst);
+	b->b_len = len;
+	buf_finish(b);
+}
+
 static struct buf *
 buf_dup(const struct buf *b)
 {
@@ -904,6 +923,7 @@ confvar_from_line(const char *line)
 		ch = line[i];
 		if (ch == '\0') {
 			buf_finish(b);
+			buf_unvis(b);
 			cv = cv_new(parent, b);
 			cv->cv_middle = buf_new_from_str(" ");
 			return (root);
@@ -927,6 +947,7 @@ confvar_from_line(const char *line)
 		}
 		if (ch == '.' || ch == '=') {
 			buf_finish(b);
+			buf_unvis(b);
 			cv = cv_new(parent, b);
 			cv->cv_middle = buf_new_from_str(" ");
 			b = buf_new();
@@ -939,6 +960,7 @@ confvar_from_line(const char *line)
 				ch = line[i];
 				if (ch == '\0') {
 					buf_finish(b);
+					buf_unvis(b);
 					cv->cv_value = b;
 					return (root);
 				}
