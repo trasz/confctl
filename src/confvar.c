@@ -23,6 +23,7 @@
  * SUCH DAMAGE.
  */
 
+#include <sys/file.h>
 #include <assert.h>
 #include <ctype.h>
 #include <err.h>
@@ -675,15 +676,22 @@ cv_load(struct confvar *parent, FILE *fp)
 }
 
 struct confvar *
-confvar_load(const char *path)
+confvar_load(const char *path, bool flocked)
 {
 	struct confvar *cv;
 	bool done;
 	FILE *fp;
+	int error;
 
 	fp = fopen(path, "r");
 	if (fp == NULL)
 		err(1, "unable to open %s", path);
+
+	if (flocked) {
+		error = flock(fileno(fp), LOCK_SH);
+		if (error != 0)
+			err(1, "unable to lock %s", path);
+	}
 
 	cv = cv_new_root();
 	for (;;) {
@@ -693,6 +701,16 @@ confvar_load(const char *path)
 		if (done)
 			break;
 	}
+
+	if (flocked) {
+		error = flock(fileno(fp), LOCK_UN);
+		if (error != 0)
+			err(1, "unable to unlock %s", path);
+	}
+
+	error = fclose(fp);
+	if (error != 0)
+		err(1, "fclose");
 
 	return (cv);
 }
@@ -718,6 +736,9 @@ confvar_save_in_place(struct confvar *cv, const char *path)
 	fp = fopen(path, "w");
 	if (fp == NULL)
 		err(1, "cannot open %s", path);
+	error = flock(fileno(fp), LOCK_EX);
+	if (error != 0)
+		err(1, "unable to lock %s", path);
 	confvar_print_c(cv, fp);
 	error = fflush(fp);
 	if (error != 0)
@@ -725,6 +746,9 @@ confvar_save_in_place(struct confvar *cv, const char *path)
 	error = fsync(fileno(fp));
 	if (error != 0)
 		err(1, "fsync");
+	error = flock(fileno(fp), LOCK_UN);
+	if (error != 0)
+		err(1, "unable to unlock %s", path);
 	error = fclose(fp);
 	if (error != 0)
 		err(1, "fclose");

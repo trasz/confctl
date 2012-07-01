@@ -94,14 +94,12 @@ main(int argc, char **argv)
 		errx(1, "-n and -w are mutually exclusive");
 	if (nflag && merge)
 		errx(1, "-n and -x are mutually exclusive");
-	if (Iflag && !merge && !remove)
-		errx(1, "-I can only be used with -w and -x");
 	if (aflag && argc > 1)
 		errx(1, "-a and variable names are mutually exclusive");
 	if (!aflag && !merge && !remove && argc == 1)
 		errx(1, "neither -a, -w, -x, or variable names specified");
 
-	root = confvar_load(argv[0]);
+	root = confvar_load(argv[0], Iflag);
 	if (merge == NULL && remove == NULL) {
 		if (!aflag) {
 			for (i = 1; i < argc; i++) {

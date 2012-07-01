@@ -5,10 +5,10 @@
 .SH NAME
 confctl \- sysctl-like tool for config files
 .SH SYNOPSIS
-.B confctl [-an]
+.B confctl [-I] -a [-n]
 .I config-file
 .br
-.B confctl [-n]
+.B confctl [-I] [-n]
 .I config-file
 .I variable-name
 .B ...
@@ -41,6 +41,8 @@ Delete the variable and update the configuration file.
 .IP -I
 Instead of writing a temporary file and then atomically replacing
 the configuration file, rewrite it in place.
+It also makes confctl acquire a file lock when reading or writing
+the configuration file.
 .SH EXAMPLES
 Say you have a configuration file that looks like this:
 .PP

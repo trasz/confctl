@@ -30,7 +30,7 @@
 
 struct confvar;
 
-struct confvar	*confvar_load(const char *path);
+struct confvar	*confvar_load(const char *path, bool flocked);
 struct confvar	*confvar_from_line(const char *line);
 void		confvar_save(struct confvar *cv, const char *path, bool in_place);
 void		confvar_print_c(struct confvar *cv, FILE *fp);
