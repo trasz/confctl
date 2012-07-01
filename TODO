@@ -18,6 +18,8 @@ Things to do before 1.1:
 
  - Use unvis(3) in confvar_from_line().
 
+ - The -I option should make confctl use file locking.
+
 Things to do before calling it done:
 
  - Properly bail out on EOF without closing curly brackets.
