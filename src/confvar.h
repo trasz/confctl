@@ -28,15 +28,17 @@
 
 #include <stdio.h>
 
-struct confvar;
+struct confctl;
+struct confctl_var;
 
-struct confvar	*confvar_load(const char *path, bool flocked);
-struct confvar	*confvar_from_line(const char *line);
-void		confvar_save(struct confvar *cv, const char *path, bool in_place);
-void		confvar_print_c(struct confvar *cv, FILE *fp);
-void		confvar_print_lines(struct confvar *cv, FILE *fp, bool values_only);
-void		confvar_merge(struct confvar **cvp, struct confvar *merge);
-void		confvar_remove(struct confvar *cv, struct confvar *remove);
-void		confvar_filter(struct confvar *cv, struct confvar *filter);
+struct confctl	*confctl_init(bool rewrite_in_place);
+void		confctl_load(struct confctl *cc, const char *path);
+void		confctl_save(struct confctl *cc, const char *path);
+void		confctl_print_lines(struct confctl *cc, FILE *fp, bool values_only);
+struct confctl_var	*confctl_root(struct confctl *cc);
+struct confctl_var	*confctl_var_from_line(const char *line);
+void		confctl_var_merge(struct confctl_var **cvp, struct confctl_var *merge);
+void		confctl_var_remove(struct confctl_var *cv, struct confctl_var *remove);
+void		confctl_var_filter(struct confctl_var *cv, struct confctl_var *filter);
 
 #endif /* !CONFVAR_H */

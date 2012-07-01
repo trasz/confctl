@@ -40,6 +40,8 @@
 #include "confvar.h"
 #include "confvar_private.h"
 
+static void	confctl_print_c(struct confctl *cc, FILE *fp);
+
 static struct buf *
 buf_new(void)
 {
@@ -176,10 +178,10 @@ buf_delete(struct buf *b)
 	free(b);
 }
 
-static struct confvar *
-cv_new(struct confvar *parent, struct buf *name)
+static struct confctl_var *
+cv_new(struct confctl_var *parent, struct buf *name)
 {
-	struct confvar *cv;
+	struct confctl_var *cv;
 
 	cv = calloc(sizeof(*cv), 1);
 	if (cv == NULL)
@@ -199,10 +201,10 @@ cv_new(struct confvar *parent, struct buf *name)
 	return (cv);
 }
 
-static struct confvar *
+static struct confctl_var *
 cv_new_root(void)
 {
-	struct confvar *cv;
+	struct confctl_var *cv;
 
 	cv = cv_new(NULL, buf_new_from_str("HKEY_CLASSES_ROOT"));
 
@@ -210,9 +212,9 @@ cv_new_root(void)
 }
 
 static void
-cv_delete(struct confvar *cv)
+cv_delete(struct confctl_var *cv)
 {
-	struct confvar *child;
+	struct confctl_var *child;
 
 	TAILQ_FOREACH(child, &cv->cv_children, cv_next)
 		cv_delete(child);
@@ -612,11 +614,11 @@ unget:
 }
 
 static bool
-cv_load(struct confvar *parent, FILE *fp)
+cv_load(struct confctl_var *parent, FILE *fp)
 {
 	struct buf *before, *name, *middle, *value, *after;
 	bool closing_bracket, opening_bracket;
-	struct confvar *cv;
+	struct confctl_var *cv;
 
 	/*
 	 * There are three cases here:
@@ -694,46 +696,6 @@ cv_load(struct confvar *parent, FILE *fp)
 	return (false);
 }
 
-struct confvar *
-confvar_load(const char *path, bool flocked)
-{
-	struct confvar *cv;
-	bool done;
-	FILE *fp;
-	int error;
-
-	fp = fopen(path, "r");
-	if (fp == NULL)
-		err(1, "unable to open %s", path);
-
-	if (flocked) {
-		error = flock(fileno(fp), LOCK_SH);
-		if (error != 0)
-			err(1, "unable to lock %s", path);
-	}
-
-	cv = cv_new_root();
-	for (;;) {
-		done = cv_load(cv, fp);
-		if (ferror(fp) != 0)
-			err(1, "read");
-		if (done)
-			break;
-	}
-
-	if (flocked) {
-		error = flock(fileno(fp), LOCK_UN);
-		if (error != 0)
-			err(1, "unable to unlock %s", path);
-	}
-
-	error = fclose(fp);
-	if (error != 0)
-		err(1, "fclose");
-
-	return (cv);
-}
-
 static void
 remove_tmpfile(const char *tmppath)
 {
@@ -747,7 +709,7 @@ remove_tmpfile(const char *tmppath)
 }
 
 static void
-confvar_save_in_place(struct confvar *cv, const char *path)
+confctl_save_in_place(struct confctl *cc, const char *path)
 {
 	FILE *fp;
 	int error;
@@ -758,7 +720,7 @@ confvar_save_in_place(struct confvar *cv, const char *path)
 	error = flock(fileno(fp), LOCK_EX);
 	if (error != 0)
 		err(1, "unable to lock %s", path);
-	confvar_print_c(cv, fp);
+	confctl_print_c(cc, fp);
 	error = fflush(fp);
 	if (error != 0)
 		err(1, "fflush");
@@ -774,7 +736,7 @@ confvar_save_in_place(struct confvar *cv, const char *path)
 }
 
 static void
-confvar_save_atomic(struct confvar *cv, const char *path)
+confctl_save_atomic(struct confctl *cc, const char *path)
 {
 	FILE *fp;
 	int error, fd;
@@ -791,7 +753,7 @@ confvar_save_atomic(struct confvar *cv, const char *path)
 		remove_tmpfile(tmppath);
 		err(1, "fdopen");
 	}
-	confvar_print_c(cv, fp);
+	confctl_print_c(cc, fp);
 	error = fflush(fp);
 	if (error != 0) {
 		remove_tmpfile(tmppath);
@@ -815,18 +777,14 @@ confvar_save_atomic(struct confvar *cv, const char *path)
 }
 
 void
-confvar_save(struct confvar *cv, const char *path, bool in_place)
+confctl_var_save(struct confctl_var *cv, const char *path, bool in_place)
 {
 
-	if (in_place)
-		confvar_save_in_place(cv, path);
-	else
-		confvar_save_atomic(cv, path);
 
 }
 
 static bool
-cv_is_container(const struct confvar *cv)
+cv_is_container(const struct confctl_var *cv)
 {
 
 	if (cv->cv_value == NULL)
@@ -835,9 +793,9 @@ cv_is_container(const struct confvar *cv)
 }
 
 static void
-cv_print_c(struct confvar *cv, FILE *fp)
+cv_print_c(struct confctl_var *cv, FILE *fp)
 {
-	struct confvar *child;
+	struct confctl_var *child;
 
 	if (cv->cv_filtered_out)
 		return;
@@ -851,20 +809,21 @@ cv_print_c(struct confvar *cv, FILE *fp)
 	buf_print(cv->cv_after, fp);
 }
 
-void
-confvar_print_c(struct confvar *cv, FILE *fp)
+static void
+confctl_print_c(struct confctl *cc, FILE *fp)
 {
-	struct confvar *child;
+	struct confctl_var *cv, *child;
 
+	cv = confctl_root(cc);
 	TAILQ_FOREACH(child, &cv->cv_children, cv_next)
 		cv_print_c(child, fp);
 	buf_print(cv->cv_after, fp);
 }
 
 static void
-cv_print_lines(struct confvar *cv, FILE *fp, const char *prefix, bool values_only)
+cv_print_lines(struct confctl_var *cv, FILE *fp, const char *prefix, bool values_only)
 {
-	struct confvar *child;
+	struct confctl_var *child;
 	char *newprefix, *name, *value;
 
 	if (cv->cv_filtered_out)
@@ -899,18 +858,19 @@ cv_print_lines(struct confvar *cv, FILE *fp, const char *prefix, bool values_onl
 }
 
 void
-confvar_print_lines(struct confvar *cv, FILE *fp, bool values_only)
+confctl_print_lines(struct confctl *cc, FILE *fp, bool values_only)
 {
-	struct confvar *child;
+	struct confctl_var *cv, *child;
 
+	cv = confctl_root(cc);
 	TAILQ_FOREACH(child, &cv->cv_children, cv_next)
 		cv_print_lines(child, fp, NULL, values_only);
 }
 
-struct confvar *
-confvar_from_line(const char *line)
+struct confctl_var *
+confctl_var_from_line(const char *line)
 {
-	struct confvar *cv, *parent, *root;
+	struct confctl_var *cv, *parent, *root;
 	struct buf *b;
 	bool escaped = false, quoted = false, squoted = false;
 	int i;
@@ -972,7 +932,7 @@ confvar_from_line(const char *line)
 }
 
 static struct buf *
-buf_get_indent(struct confvar *cv)
+buf_get_indent(struct confctl_var *cv)
 {
 	struct buf *b;
 	int i;
@@ -992,12 +952,12 @@ buf_get_indent(struct confvar *cv)
 }
 
 static void
-cv_reindent(struct confvar *cv)
+cv_reindent(struct confctl_var *cv)
 {
 	struct buf *b = NULL;
-	struct confvar *prev, *child;
+	struct confctl_var *prev, *child;
 
-	prev = TAILQ_PREV(cv, confvar_head, cv_next);
+	prev = TAILQ_PREV(cv, confctl_var_head, cv_next);
 	if (prev != NULL)
 		b = buf_get_indent(prev);
 	if (b == NULL) {
@@ -1023,9 +983,9 @@ cv_reindent(struct confvar *cv)
 }
 
 static void
-cv_merge_existing(struct confvar *cv, struct confvar *newcv)
+cv_merge_existing(struct confctl_var *cv, struct confctl_var *newcv)
 {
-	struct confvar *child, *newchild, *tmp, *newtmp;
+	struct confctl_var *child, *newchild, *tmp, *newtmp;
 
 	if (strcmp(cv->cv_name->b_buf, newcv->cv_name->b_buf) != 0)
 		return;
@@ -1051,7 +1011,7 @@ cv_merge_existing(struct confvar *cv, struct confvar *newcv)
 }
 
 static void
-cv_reparent(struct confvar *cv, struct confvar *parent)
+cv_reparent(struct confctl_var *cv, struct confctl_var *parent)
 {
 
 	if (cv->cv_parent != NULL)
@@ -1062,9 +1022,9 @@ cv_reparent(struct confvar *cv, struct confvar *parent)
 }
 
 static bool
-cv_merge_new(struct confvar *cv, struct confvar *newcv)
+cv_merge_new(struct confctl_var *cv, struct confctl_var *newcv)
 {
-	struct confvar *child, *newchild, *tmp, *newtmp;
+	struct confctl_var *child, *newchild, *tmp, *newtmp;
 	bool found;
 
 	if (strcmp(cv->cv_name->b_buf, newcv->cv_name->b_buf) != 0)
@@ -1088,7 +1048,7 @@ cv_merge_new(struct confvar *cv, struct confvar *newcv)
 }
 
 void
-confvar_merge(struct confvar **cvp, struct confvar *merge)
+confctl_var_merge(struct confctl_var **cvp, struct confctl_var *merge)
 {
 
 	if (*cvp == NULL)
@@ -1106,9 +1066,9 @@ confvar_merge(struct confvar **cvp, struct confvar *merge)
 }
 
 void
-confvar_remove(struct confvar *cv, struct confvar *remove)
+confctl_var_remove(struct confctl_var *cv, struct confctl_var *remove)
 {
-	struct confvar *child, *removechild, *tmp;
+	struct confctl_var *child, *removechild, *tmp;
 
 	if (remove->cv_value != NULL)
 		errx(1, "variable to remove must not specify a value");
@@ -1121,7 +1081,7 @@ confvar_remove(struct confvar *cv, struct confvar *remove)
 	} else {
 		TAILQ_FOREACH_SAFE(child, &cv->cv_children, cv_next, tmp) {
 			TAILQ_FOREACH(removechild, &remove->cv_children, cv_next)
-				confvar_remove(child, removechild);
+				confctl_var_remove(child, removechild);
 		}
 	}
 
@@ -1130,9 +1090,9 @@ confvar_remove(struct confvar *cv, struct confvar *remove)
 }
 
 static bool
-cv_filter(struct confvar *cv, struct confvar *filter)
+cv_filter(struct confctl_var *cv, struct confctl_var *filter)
 {
-	struct confvar *child, *filterchild;
+	struct confctl_var *child, *filterchild;
 	bool found;
 
 	if (filter->cv_value != NULL)
@@ -1161,10 +1121,77 @@ cv_filter(struct confvar *cv, struct confvar *filter)
 }
 
 void
-confvar_filter(struct confvar *cv, struct confvar *filter)
+confctl_var_filter(struct confctl_var *cv, struct confctl_var *filter)
 {
 	bool found;
 
 	found = cv_filter(cv, filter);
 	assert(found);
+}
+
+struct confctl *
+confctl_init(bool rewrite_in_place)
+{
+	struct confctl *cc;
+
+	cc = calloc(sizeof(*cc), 1);
+	if (cc == NULL)
+		err(1, "calloc");
+	cc->cc_rewrite_in_place = rewrite_in_place;
+	cc->cc_root = cv_new_root();
+
+	return (cc);
+}
+
+void	
+confctl_load(struct confctl *cc, const char *path)
+{
+	bool done;
+	FILE *fp;
+	int error;
+
+	fp = fopen(path, "r");
+	if (fp == NULL)
+		err(1, "unable to open %s", path);
+
+	if (cc->cc_rewrite_in_place) {
+		error = flock(fileno(fp), LOCK_SH);
+		if (error != 0)
+			err(1, "unable to lock %s", path);
+	}
+
+	for (;;) {
+		done = cv_load(confctl_root(cc), fp);
+		if (ferror(fp) != 0)
+			err(1, "read");
+		if (done)
+			break;
+	}
+
+	if (cc->cc_rewrite_in_place) {
+		error = flock(fileno(fp), LOCK_UN);
+		if (error != 0)
+			err(1, "unable to unlock %s", path);
+	}
+
+	error = fclose(fp);
+	if (error != 0)
+		err(1, "fclose");
+}
+
+void	
+confctl_save(struct confctl *cc, const char *path)
+{
+
+	if (cc->cc_rewrite_in_place)
+		confctl_save_in_place(cc, path);
+	else
+		confctl_save_atomic(cc, path);
+}
+
+struct confctl_var *
+confctl_root(struct confctl *cc)
+{
+
+	return (cc->cc_root);
 }

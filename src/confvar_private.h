@@ -41,17 +41,26 @@ struct buf {
  * variable name (cv_before), between the name and value or child variables
  * (cv_middle), and after value or child variables (cv_after).
  */
-struct confvar {
-	TAILQ_ENTRY(confvar)	cv_next;
-	struct buf		*cv_before;
-	struct buf		*cv_name;
-	struct buf		*cv_middle;
-	struct buf		*cv_value;
-	struct buf		*cv_after;
-	struct confvar		*cv_parent;
-	bool			cv_filtered_out:1;
-	bool			cv_delete_when_empty:1;
-	TAILQ_HEAD(confvar_head, confvar)	cv_children;
+struct confctl_var {
+	TAILQ_ENTRY(confctl_var)	cv_next;
+	struct buf			*cv_before;
+	struct buf			*cv_name;
+	struct buf			*cv_middle;
+	struct buf			*cv_value;
+	struct buf			*cv_after;
+	struct confctl_var		*cv_parent;
+	bool				cv_filtered_out:1;
+	bool				cv_delete_when_empty:1;
+	TAILQ_HEAD(confctl_var_head, confctl_var)	cv_children;
+};
+
+/*
+ * Root of the configuration tree.  Apart from being root, it also contains
+ * variables that control configuration file syntax.
+ */
+struct confctl {
+	struct confctl_var	*cc_root;
+	bool			cc_rewrite_in_place;
 };
 
 #endif /* !CONFCTL_PRIVATE_H */

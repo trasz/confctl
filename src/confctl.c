@@ -48,7 +48,8 @@ main(int argc, char **argv)
 {
 	int ch, i;
 	bool aflag = false, Iflag = false, nflag = false;
-	struct confvar *root, *cv, *filter = NULL, *merge = NULL, *remove = NULL;
+	struct confctl *cc;
+	struct confctl_var *root, *cv, *filter = NULL, *merge = NULL, *remove = NULL;
 
 	if (argc <= 1)
 		usage();
@@ -65,12 +66,12 @@ main(int argc, char **argv)
 			nflag = true;
 			break;
 		case 'w':
-			cv = confvar_from_line(optarg);
-			confvar_merge(&merge, cv);
+			cv = confctl_var_from_line(optarg);
+			confctl_var_merge(&merge, cv);
 			break;
 		case 'x':
-			cv = confvar_from_line(optarg);
-			confvar_merge(&remove, cv);
+			cv = confctl_var_from_line(optarg);
+			confctl_var_merge(&remove, cv);
 			break;
 		case '?':
 		default:
@@ -99,31 +100,33 @@ main(int argc, char **argv)
 	if (!aflag && !merge && !remove && argc == 1)
 		errx(1, "neither -a, -w, -x, or variable names specified");
 
-	root = confvar_load(argv[0], Iflag);
+	cc = confctl_init(Iflag);
+	confctl_load(cc, argv[0]);
+	root = confctl_root(cc);
 	if (merge == NULL && remove == NULL) {
 		if (!aflag) {
 			for (i = 1; i < argc; i++) {
-				cv = confvar_from_line(argv[i]);
-				confvar_merge(&filter, cv);
+				cv = confctl_var_from_line(argv[i]);
+				confctl_var_merge(&filter, cv);
 			}
-			confvar_filter(root, filter);
+			confctl_var_filter(root, filter);
 		}
-		confvar_print_lines(root, stdout, nflag);
+		confctl_print_lines(cc, stdout, nflag);
 	} else {
 		/*
-		 * We're not using confvar_filter() mechanism,
+		 * We're not using confctl_var_filter() mechanism,
 		 * because we really want to remove the nodes here,
 		 * so that we can e.g. replace them by using -x
-		 * and -w together.  Also, confvar_filter() works
+		 * and -w together.  Also, confctl_var_filter() works
 		 * the other way around, exposing selected nodes
 		 * and hiding all the rest; we would need to 'invert'
 		 * the filter somehow.
 		 */
 		if (remove != NULL)
-			confvar_remove(root, remove);
+			confctl_var_remove(root, remove);
 		if (merge != NULL)
-			confvar_merge(&root, merge);
-		confvar_save(root, argv[0], Iflag);
+			confctl_var_merge(&root, merge);
+		confctl_save(cc, argv[0]);
 	}
 
 	return (0);
