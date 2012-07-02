@@ -29,5 +29,7 @@ Things to do before calling it done:
    'meh=1\n meh=2\n meh=3'.  This would make nicer output for
    JunOS-like config.
 
+ - Consider adding some automatic quote handling.
+
  - The whole cv_reindent() looks fishy.
 
