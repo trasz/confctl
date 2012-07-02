@@ -719,6 +719,8 @@ cv_reindent(struct confctl *cc, struct confctl_var *cv)
 			else
 				cv->cv_middle = buf_new_from_str(" ");
 		}
+		if (cc->cc_semicolon)
+			cv->cv_after = buf_new_from_str(";");
 	}
 }
 
@@ -932,6 +934,13 @@ confctl_set_rewrite_in_place(struct confctl *cc, bool rewrite)
 {
 
 	cc->cc_rewrite_in_place = rewrite;
+}
+
+void
+confctl_set_semicolon(struct confctl *cc, bool semicolon)
+{
+
+	cc->cc_semicolon = semicolon;
 }
 
 void

@@ -42,6 +42,7 @@ struct confctl_var;
 struct confctl		*confctl_new(void);
 void			confctl_set_equals_sign(struct confctl *cc, bool equals);
 void			confctl_set_rewrite_in_place(struct confctl *cc, bool rewrite);
+void			confctl_set_semicolon(struct confctl *cc, bool semicolon);
 void			confctl_set_slash_slash_comments(struct confctl *cc, bool slash);
 void			confctl_load(struct confctl *cc, const char *path);
 void			confctl_save(struct confctl *cc, const char *path);

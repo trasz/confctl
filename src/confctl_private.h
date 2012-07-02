@@ -63,6 +63,7 @@ struct confctl {
 	struct confctl_var	*cc_root;
 	bool			cc_equals_sign;
 	bool			cc_rewrite_in_place;
+	bool			cc_semicolon;
 	bool			cc_slash_slash_comments;
 };
 

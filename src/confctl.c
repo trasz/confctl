@@ -39,10 +39,10 @@ static void
 usage(void)
 {
 
-	fprintf(stderr, "usage: confctl [-CEIn] config-path [name...]\n");
-	fprintf(stderr, "       confctl [-CEIn] -a config-path\n");
-	fprintf(stderr, "       confctl [-CEI] -w name=value config-path\n");
-	fprintf(stderr, "       confctl [-CEI] -x name config-path\n");
+	fprintf(stderr, "usage: confctl [-CEISn] config-path [name...]\n");
+	fprintf(stderr, "       confctl [-CEISn] -a config-path\n");
+	fprintf(stderr, "       confctl [-CEIS] -w name=value config-path\n");
+	fprintf(stderr, "       confctl [-CEIS] -x name config-path\n");
 	exit(1);
 }
 
@@ -341,13 +341,13 @@ int
 main(int argc, char **argv)
 {
 	int ch, i;
-	bool aflag = false, Cflag = false, Eflag = false, Iflag = false, nflag = false;
+	bool aflag = false, Cflag = false, Eflag = false, Iflag = false, Sflag = false, nflag = false;
 	struct confctl *cc, *line, *merge = NULL, *remove = NULL, *filter = NULL;
 
 	if (argc <= 1)
 		usage();
 
-	while ((ch = getopt(argc, argv, "aCEInw:x:")) != -1) {
+	while ((ch = getopt(argc, argv, "aCEISnw:x:")) != -1) {
 		switch (ch) {
 		case 'a':
 			aflag = true;
@@ -360,6 +360,9 @@ main(int argc, char **argv)
 			break;
 		case 'I':
 			Iflag = true;
+			break;
+		case 'S':
+			Sflag = true;
 			break;
 		case 'n':
 			nflag = true;
@@ -402,6 +405,7 @@ main(int argc, char **argv)
 	cc = confctl_new();
 	confctl_set_equals_sign(cc, Eflag);
 	confctl_set_rewrite_in_place(cc, Iflag);
+	confctl_set_semicolon(cc, Sflag);
 	confctl_set_slash_slash_comments(cc, Cflag);
 	confctl_load(cc, argv[0]);
 	if (merge == NULL && remove == NULL) {

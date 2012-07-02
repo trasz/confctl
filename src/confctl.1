@@ -5,19 +5,19 @@
 .SH NAME
 confctl \- sysctl-like tool for config files
 .SH SYNOPSIS
-.B confctl [-CEI] -a [-n]
+.B confctl [-CEIS] -a [-n]
 .I config-file
 .br
-.B confctl [-CEI] [-n]
+.B confctl [-CEIS] [-n]
 .I config-file
 .I variable-name
 .B ...
 .br
-.B confctl [-CEI] -w
+.B confctl [-CEIS] -w
 .I variable-name=value
 .I config-file
 .br
-.B confctl [-CEI] -x
+.B confctl [-CEIS] -x
 .I variable-name
 .I config-file
 .SH DESCRIPTION
@@ -47,6 +47,10 @@ Instead of writing a temporary file and then atomically replacing
 the configuration file, rewrite it in place.
 It also makes confctl acquire a file lock when reading or writing
 the configuration file.
+.IP -S
+Use semicolon (';') after values.
+Note that the semicolon is always treated as terminating character
+when parsing, regardless of this option.
 .SH EXAMPLES
 Say you have a configuration file that looks like this:
 .PP
