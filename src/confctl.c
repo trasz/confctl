@@ -209,7 +209,7 @@ cv_remove(struct confctl_var *cv, struct confctl_var *remove)
 		}
 	}
 
-	if (confctl_var_delete_when_empty(cv) && confctl_var_first_child(cv) == NULL)
+	if (confctl_var_is_implicit_container(cv) && confctl_var_first_child(cv) == NULL)
 		confctl_var_delete(cv);
 }
 

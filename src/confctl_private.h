@@ -50,7 +50,7 @@ struct confctl_var {
 	struct buf			*cv_after;
 	struct confctl_var		*cv_parent;
 	void				*cv_uptr;
-	bool				cv_delete_when_empty:1;
+	bool				cv_implicit_container:1;
 	bool				cv_needs_reindent:1;
 	TAILQ_HEAD(confctl_var_head, confctl_var)	cv_children;
 };

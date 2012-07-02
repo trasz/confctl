@@ -628,7 +628,7 @@ cv_load(const struct confctl *cc, struct confctl_var *parent, FILE *fp)
 			 * only the 'a' node, but also its parent,
 			 * 'on'.
 			 */
-			cv->cv_delete_when_empty = true;
+			cv->cv_implicit_container = true;
 
 			middle = buf_read_middle(cc, fp, &opening_bracket);
 			assert(opening_bracket);
@@ -1113,10 +1113,10 @@ confctl_var_move(struct confctl_var *cv, struct confctl_var *parent)
 }
 
 bool
-confctl_var_delete_when_empty(struct confctl_var *cv)
+confctl_var_is_implicit_container(struct confctl_var *cv)
 {
 
-	return (cv->cv_delete_when_empty);
+	return (cv->cv_implicit_container);
 }
 
 void *

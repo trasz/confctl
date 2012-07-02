@@ -36,6 +36,9 @@ struct confctl;
 /*
  * 'struct confctl_var' represents a single node in the configuration tree.
  * Every node has a name, which can be empty, and either a value, or children.
+ * Note that names are not guaranteed to be unique: if you have a config that
+ * looks like this: '1 { foo }; 2 { bar }; 1 { baz }', the root element will
+ * have three children: '1', '2' and '1'.
  */
 struct confctl_var;
 
@@ -58,7 +61,12 @@ struct confctl_var	*confctl_var_new(struct confctl_var *parent, const char *name
 void			confctl_var_delete(struct confctl_var *cv);
 void			confctl_var_move(struct confctl_var *cv, struct confctl_var *new_parent);
 
-bool			confctl_var_delete_when_empty(struct confctl_var *cv);
+/*
+ * Say you have something like this: 'on whatever { some more stuff }'.  In this case,
+ * parser will mark the 'on' node as implicit.  What this means is when you delete
+ * the 'whatever' node, you'll also want to delete the 'on' one.
+ */
+bool			confctl_var_is_implicit_container(struct confctl_var *cv);
 void			*confctl_var_uptr(struct confctl_var *cv);
 void			confctl_var_set_uptr(struct confctl_var *cv, void *uptr);
 
