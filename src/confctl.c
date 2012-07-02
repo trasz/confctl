@@ -197,7 +197,7 @@ cv_remove(struct confctl_var *cv, struct confctl_var *remove)
 	} else {
 		child = confctl_var_first_child(cv);
 		while (child != NULL) {
-			next = confctl_var_next(next);
+			next = confctl_var_next(child);
 
 			for (removechild = confctl_var_first_child(remove); removechild != NULL; removechild = confctl_var_next(removechild))
 				cv_remove(child, removechild);
