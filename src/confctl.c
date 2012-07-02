@@ -46,12 +46,13 @@ usage(void)
 }
 
 /*
- * This is used for two purposes - first, instead of removing the nodes
- * when selecting variables to display (e.g. 'confctl path some.variable');
- * this is just a performance optimisation.  Second, to mark nodes when merging.
+ * This is used for two purposes - first, when selecting variables to display
+ * (e.g. 'confctl path some.variable some.other.variable'), we mark nodes
+ * that should be hidden instead of removing them; this is just a performance
+ * optimisation.  Second, when merging, we mark nodes that were already merged.
  */
 static bool
-cv_filtered_out(struct confctl_var *cv)
+cv_marked(struct confctl_var *cv)
 {
 	if (confctl_var_uptr(cv) != NULL)
 		return (true);
@@ -59,7 +60,7 @@ cv_filtered_out(struct confctl_var *cv)
 }
 
 static void
-cv_set_filtered_out(struct confctl_var *cv, bool v)
+cv_mark(struct confctl_var *cv, bool v)
 {
 	if (v)
 		confctl_var_set_uptr(cv, (void *)1);
@@ -83,7 +84,7 @@ cv_merge_existing(struct confctl_var *cv, struct confctl_var *newcv)
 		 * Mark the node as done, so that we won't try
 		 * to add it in cv_merge_new().
 		 */
-		cv_set_filtered_out(newcv, true);
+		cv_mark(newcv, true);
 		return;
 	}
 
@@ -118,7 +119,7 @@ cv_merge_new(struct confctl_var *cv, struct confctl_var *newcv)
 	if (strcmp(confctl_var_name(cv), confctl_var_name(newcv)) != 0)
 		return (false);
 
-	if (cv_filtered_out(newcv))
+	if (cv_marked(newcv))
 		return (true);
 
 	/*
@@ -239,9 +240,9 @@ cv_filter(struct confctl_var *cv, struct confctl_var *filter)
 			}
 		}
 		if (found)
-			cv_set_filtered_out(child, false);
+			cv_mark(child, false);
 		else
-			cv_set_filtered_out(child, true);
+			cv_mark(child, true);
 	}
 
 	return (true);
@@ -292,7 +293,7 @@ cv_print(struct confctl_var *cv, FILE *fp, const char *prefix, bool values_only)
 	struct confctl_var *child;
 	char *newprefix, *name, *value;
 
-	if (cv_filtered_out(cv))
+	if (cv_marked(cv))
 		return;
 
 	if (confctl_var_is_container(cv)) {
