@@ -44,6 +44,7 @@ struct confctl_var	*confctl_var_first_child(struct confctl_var *parent);
 struct confctl_var	*confctl_var_next(struct confctl_var *cv);
 struct confctl_var	*confctl_var_new(struct confctl_var *parent, const char *name);
 void			confctl_var_delete(struct confctl_var *cv);
+void			confctl_var_move(struct confctl_var *cv, struct confctl_var *new_parent);
 
 /*
  * XXX: move to confctl.c, it's confctl(1)-specific.

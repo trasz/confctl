@@ -51,13 +51,13 @@ cv_merge_existing(struct confctl_var *cv, struct confctl_var *newcv)
 {
 	struct confctl_var *child, *newchild, *tmp, *newtmp;
 
-	if (strcmp(cv->cv_name->b_buf, newcv->cv_name->b_buf) != 0)
+	if (strcmp(confctl_var_name(cv), confctl_var_name(newcv)) != 0)
 		return;
 
 	if (!confctl_var_is_container(newcv)) {
 		if (confctl_var_is_container(cv))
 			errx(1, "cannot replace container node with leaf node");
-		confctl_var_set_value(cv, newcv->cv_value->b_buf);
+		confctl_var_set_value(cv, confctl_var_value(newcv));
 		/*
 		 * Mark the node as done, so that we won't try
 		 * to add it in cv_merge_new().
@@ -72,24 +72,13 @@ cv_merge_existing(struct confctl_var *cv, struct confctl_var *newcv)
 	}
 }
 
-static void
-cv_reparent(struct confctl_var *cv, struct confctl_var *parent)
-{
-
-	if (cv->cv_parent != NULL)
-		TAILQ_REMOVE(&cv->cv_parent->cv_children, cv, cv_next);
-	cv->cv_parent = parent;
-	TAILQ_INSERT_TAIL(&parent->cv_children, cv, cv_next);
-	cv_reindent(cv);
-}
-
 static bool
 cv_merge_new(struct confctl_var *cv, struct confctl_var *newcv)
 {
 	struct confctl_var *child, *newchild, *tmp, *newtmp;
 	bool found;
 
-	if (strcmp(cv->cv_name->b_buf, newcv->cv_name->b_buf) != 0)
+	if (strcmp(confctl_var_name(cv), confctl_var_name(newcv)) != 0)
 		return (false);
 
 	if (newcv->cv_filtered_out)
@@ -103,7 +92,7 @@ cv_merge_new(struct confctl_var *cv, struct confctl_var *newcv)
 				break;
 		}
 		if (!found)
-			cv_reparent(newchild, cv);
+			confctl_var_move(newchild, cv);
 	}
 
 	return (true);
@@ -135,10 +124,10 @@ cc_var_remove(struct confctl_var *cv, struct confctl_var *remove)
 	if (remove->cv_value != NULL)
 		errx(1, "variable to remove must not specify a value");
 
-	if (strcmp(remove->cv_name->b_buf, cv->cv_name->b_buf) != 0)
+	if (strcmp(confctl_var_name(remove), confctl_var_name(cv)) != 0)
 		return;
 
-	if (TAILQ_EMPTY(&remove->cv_children)) {
+	if (confctl_var_first_child(remove) == NULL) {
 		confctl_var_delete(cv);
 	} else {
 		TAILQ_FOREACH_SAFE(child, &cv->cv_children, cv_next, tmp) {
@@ -147,7 +136,7 @@ cc_var_remove(struct confctl_var *cv, struct confctl_var *remove)
 		}
 	}
 
-	if (cv->cv_delete_when_empty && TAILQ_EMPTY(&cv->cv_children))
+	if (cv->cv_delete_when_empty && confctl_var_first_child(cv) == NULL)
 		confctl_var_delete(cv);
 }
 
@@ -160,15 +149,15 @@ cv_filter(struct confctl_var *cv, struct confctl_var *filter)
 	if (filter->cv_value != NULL)
 		errx(1, "filter must not specify a value");
 
-	if (strcmp(filter->cv_name->b_buf, cv->cv_name->b_buf) != 0)
+	if (strcmp(confctl_var_name(filter), confctl_var_name(cv)) != 0)
 		return (false);
 
-	TAILQ_FOREACH(child, &cv->cv_children, cv_next) {
-		if (TAILQ_EMPTY(&filter->cv_children)) {
+	for (child = confctl_var_first_child(cv); child != NULL; child = confctl_var_next(child)) {
+		if (confctl_var_first_child(filter) == NULL) {
 			found = true;
 		} else {
 			found = false;
-			TAILQ_FOREACH(filterchild, &filter->cv_children, cv_next) {
+			for (filterchild = confctl_var_first_child(filter); filterchild != NULL; filterchild = confctl_var_next(filterchild)) {
 				if (cv_filter(child, filterchild))
 					found = true;
 			}
@@ -239,7 +228,7 @@ cv_print(struct confctl_var *cv, FILE *fp, const char *prefix, bool values_only)
 		free(name);
 		if (newprefix == NULL)
 			err(1, "asprintf");
-		TAILQ_FOREACH(child, &cv->cv_children, cv_next)
+		for (child = confctl_var_first_child(cv); child != NULL; child = confctl_var_next(child))
 			cv_print(child, fp, newprefix, values_only);
 		free(newprefix);
 	} else {
@@ -264,7 +253,7 @@ cc_print(struct confctl *cc, FILE *fp, bool values_only)
 	struct confctl_var *cv, *child;
 
 	cv = confctl_root(cc);
-	TAILQ_FOREACH(child, &cv->cv_children, cv_next)
+	for (child = confctl_var_first_child(cv); child != NULL; child = confctl_var_next(child))
 		cv_print(child, fp, NULL, values_only);
 }
 

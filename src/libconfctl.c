@@ -1033,3 +1033,14 @@ confctl_var_delete(struct confctl_var *cv)
 		TAILQ_REMOVE(&cv->cv_parent->cv_children, cv, cv_next);
 }
 
+void
+confctl_var_move(struct confctl_var *cv, struct confctl_var *parent)
+{
+
+	if (cv->cv_parent != NULL)
+		TAILQ_REMOVE(&cv->cv_parent->cv_children, cv, cv_next);
+	cv->cv_parent = parent;
+	TAILQ_INSERT_TAIL(&parent->cv_children, cv, cv_next);
+	cv_reindent(cv);
+}
+
