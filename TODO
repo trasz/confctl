@@ -28,8 +28,8 @@ Things to do before calling it done:
  - Mimick cv_after from existing entries, so that newly added
    variables get a semicolon, if the rest of the file uses it.
 
- - Currently we always treat names without values, so things
-   like 'meh { 1; 2; 3 }' became 'meh.1=\n meh.2\n meh.3'.
+ - Currently we always treat names without values as names,
+   so things like 'meh { 1; 2; 3 }' became 'meh.1=\n meh.2\n meh.3'.
    Add an option to make them as values without names, like this:
    'meh=1\n meh=2\n meh=3'.  This would make nicer output for
    JunOS-like config.
