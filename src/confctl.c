@@ -38,6 +38,7 @@
 static void
 usage(void)
 {
+
 	fprintf(stderr, "usage: confctl [-In] config-path [name...]\n");
 	fprintf(stderr, "       confctl [-In] -a config-path\n");
 	fprintf(stderr, "       confctl [-I] -w name=value config-path\n");
@@ -54,6 +55,7 @@ usage(void)
 static bool
 cv_marked(struct confctl_var *cv)
 {
+
 	if (confctl_var_uptr(cv) != NULL)
 		return (true);
 	return (false);
@@ -62,6 +64,7 @@ cv_marked(struct confctl_var *cv)
 static void
 cv_mark(struct confctl_var *cv, bool v)
 {
+
 	if (v)
 		confctl_var_set_uptr(cv, (void *)1);
 	else

@@ -1047,6 +1047,7 @@ confctl_var_move(struct confctl_var *cv, struct confctl_var *parent)
 bool
 confctl_var_delete_when_empty(struct confctl_var *cv)
 {
+
 	return (cv->cv_delete_when_empty);
 }
 
