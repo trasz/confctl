@@ -31,7 +31,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "vis.h"
+
 #include "confctl.h"
+#include "confctl_private.h"
 
 static void
 usage(void)
@@ -41,6 +44,228 @@ usage(void)
 	fprintf(stderr, "       confctl [-I] -w name=value config-path\n");
 	fprintf(stderr, "       confctl [-I] -x name config-path\n");
 	exit(1);
+}
+
+static void
+cv_merge_existing(struct confctl_var *cv, struct confctl_var *newcv)
+{
+	struct confctl_var *child, *newchild, *tmp, *newtmp;
+
+	if (strcmp(cv->cv_name->b_buf, newcv->cv_name->b_buf) != 0)
+		return;
+
+	if (!confctl_var_is_container(newcv)) {
+		if (confctl_var_is_container(cv))
+			errx(1, "cannot replace container node with leaf node");
+		confctl_var_set_value(cv, newcv->cv_value->b_buf);
+		/*
+		 * Mark the node as done, so that we won't try
+		 * to add it in cv_merge_new().
+		 */
+		newcv->cv_filtered_out = true;
+		return;
+	}
+
+	TAILQ_FOREACH_SAFE(newchild, &newcv->cv_children, cv_next, newtmp) {
+		TAILQ_FOREACH_SAFE(child, &cv->cv_children, cv_next, tmp)
+			cv_merge_existing(child, newchild);
+	}
+}
+
+static void
+cv_reparent(struct confctl_var *cv, struct confctl_var *parent)
+{
+
+	if (cv->cv_parent != NULL)
+		TAILQ_REMOVE(&cv->cv_parent->cv_children, cv, cv_next);
+	cv->cv_parent = parent;
+	TAILQ_INSERT_TAIL(&parent->cv_children, cv, cv_next);
+	cv_reindent(cv);
+}
+
+static bool
+cv_merge_new(struct confctl_var *cv, struct confctl_var *newcv)
+{
+	struct confctl_var *child, *newchild, *tmp, *newtmp;
+	bool found;
+
+	if (strcmp(cv->cv_name->b_buf, newcv->cv_name->b_buf) != 0)
+		return (false);
+
+	if (newcv->cv_filtered_out)
+		return (true);
+
+	TAILQ_FOREACH_SAFE(newchild, &newcv->cv_children, cv_next, newtmp) {
+		found = false;
+		TAILQ_FOREACH_SAFE(child, &cv->cv_children, cv_next, tmp) {
+			found = cv_merge_new(child, newchild);
+			if (found)
+				break;
+		}
+		if (!found)
+			cv_reparent(newchild, cv);
+	}
+
+	return (true);
+}
+
+static void
+cc_var_merge(struct confctl_var **cvp, struct confctl_var *merge)
+{
+
+	if (*cvp == NULL)
+		*cvp = cv_new_root();
+
+	/*
+	 * Reason for doing it in two steps is that we need
+	 * to correctly handle duplicate nodes, such as this:
+	 * "1 { foo } 2 { bar } 1 { baz }".  In this case,
+	 * when merging '1.baz', we want to update the existing
+	 * node, not add a new sibling to "foo".
+	 */
+	cv_merge_existing(*cvp, merge);
+	cv_merge_new(*cvp, merge);
+}
+
+static void
+cc_var_remove(struct confctl_var *cv, struct confctl_var *remove)
+{
+	struct confctl_var *child, *removechild, *tmp;
+
+	if (remove->cv_value != NULL)
+		errx(1, "variable to remove must not specify a value");
+
+	if (strcmp(remove->cv_name->b_buf, cv->cv_name->b_buf) != 0)
+		return;
+
+	if (TAILQ_EMPTY(&remove->cv_children)) {
+		confctl_var_delete(cv);
+	} else {
+		TAILQ_FOREACH_SAFE(child, &cv->cv_children, cv_next, tmp) {
+			TAILQ_FOREACH(removechild, &remove->cv_children, cv_next)
+				cc_var_remove(child, removechild);
+		}
+	}
+
+	if (cv->cv_delete_when_empty && TAILQ_EMPTY(&cv->cv_children))
+		confctl_var_delete(cv);
+}
+
+static bool
+cv_filter(struct confctl_var *cv, struct confctl_var *filter)
+{
+	struct confctl_var *child, *filterchild;
+	bool found;
+
+	if (filter->cv_value != NULL)
+		errx(1, "filter must not specify a value");
+
+	if (strcmp(filter->cv_name->b_buf, cv->cv_name->b_buf) != 0)
+		return (false);
+
+	TAILQ_FOREACH(child, &cv->cv_children, cv_next) {
+		if (TAILQ_EMPTY(&filter->cv_children)) {
+			found = true;
+		} else {
+			found = false;
+			TAILQ_FOREACH(filterchild, &filter->cv_children, cv_next) {
+				if (cv_filter(child, filterchild))
+					found = true;
+			}
+		}
+		if (found)
+			child->cv_filtered_out = false;
+		else
+			child->cv_filtered_out = true;
+	}
+
+	return (true);
+}
+
+static void
+cc_var_filter(struct confctl_var *cv, struct confctl_var *filter)
+{
+	bool found;
+
+	found = cv_filter(cv, filter);
+	assert(found);
+}
+
+static char *
+cv_safe_name(struct confctl_var *cv)
+{
+	const char *name;
+	char *dst;
+
+	name = confctl_var_name(cv);
+	dst = malloc(strlen(name) * 4 + 1);
+	if (dst == NULL)
+		err(1, "malloc");
+	strvis(dst, name, VIS_NL | VIS_CSTYLE);
+
+	return (dst);
+}
+
+static char *
+cv_safe_value(struct confctl_var *cv)
+{
+	const char *value;
+	char *dst;
+
+	value = confctl_var_value(cv);
+	dst = malloc(strlen(value) * 4 + 1);
+	if (dst == NULL)
+		err(1, "malloc");
+	strvis(dst, value, VIS_NL | VIS_CSTYLE);
+
+	return (dst);
+}
+
+static void
+cv_print(struct confctl_var *cv, FILE *fp, const char *prefix, bool values_only)
+{
+	struct confctl_var *child;
+	char *newprefix, *name, *value;
+
+	if (cv->cv_filtered_out)
+		return;
+
+	if (confctl_var_is_container(cv)) {
+		name = cv_safe_name(cv);
+		if (prefix != NULL)
+			asprintf(&newprefix, "%s.%s", prefix, name);
+		else
+			asprintf(&newprefix, "%s", name);
+		free(name);
+		if (newprefix == NULL)
+			err(1, "asprintf");
+		TAILQ_FOREACH(child, &cv->cv_children, cv_next)
+			cv_print(child, fp, newprefix, values_only);
+		free(newprefix);
+	} else {
+		value = cv_safe_value(cv);
+		if (values_only) {
+			fprintf(fp, "%s\n", value);
+		} else {
+			name = cv_safe_name(cv);
+			if (prefix != NULL)
+				fprintf(fp, "%s.%s=%s\n", prefix, name, value);
+			else
+				fprintf(fp, "%s=%s\n", name, value);
+			free(name);
+		}
+		free(value);
+	}
+}
+
+void
+cc_print(struct confctl *cc, FILE *fp, bool values_only)
+{
+	struct confctl_var *cv, *child;
+
+	cv = confctl_root(cc);
+	TAILQ_FOREACH(child, &cv->cv_children, cv_next)
+		cv_print(child, fp, NULL, values_only);
 }
 
 int
@@ -67,11 +292,11 @@ main(int argc, char **argv)
 			break;
 		case 'w':
 			cv = confctl_var_from_line(optarg);
-			confctl_var_merge(&merge, cv);
+			cc_var_merge(&merge, cv);
 			break;
 		case 'x':
 			cv = confctl_var_from_line(optarg);
-			confctl_var_merge(&remove, cv);
+			cc_var_merge(&remove, cv);
 			break;
 		case '?':
 		default:
@@ -107,25 +332,25 @@ main(int argc, char **argv)
 		if (!aflag) {
 			for (i = 1; i < argc; i++) {
 				cv = confctl_var_from_line(argv[i]);
-				confctl_var_merge(&filter, cv);
+				cc_var_merge(&filter, cv);
 			}
-			confctl_var_filter(root, filter);
+			cc_var_filter(root, filter);
 		}
-		confctl_print_lines(cc, stdout, nflag);
+		cc_print(cc, stdout, nflag);
 	} else {
 		/*
-		 * We're not using confctl_var_filter() mechanism,
+		 * We're not using cc_var_filter() mechanism,
 		 * because we really want to remove the nodes here,
 		 * so that we can e.g. replace them by using -x
-		 * and -w together.  Also, confctl_var_filter() works
+		 * and -w together.  Also, cc_var_filter() works
 		 * the other way around, exposing selected nodes
 		 * and hiding all the rest; we would need to 'invert'
 		 * the filter somehow.
 		 */
 		if (remove != NULL)
-			confctl_var_remove(root, remove);
+			cc_var_remove(root, remove);
 		if (merge != NULL)
-			confctl_var_merge(&root, merge);
+			cc_var_merge(&root, merge);
 		confctl_save(cc, argv[0]);
 	}
 

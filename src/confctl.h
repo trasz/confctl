@@ -23,22 +23,37 @@
  * SUCH DAMAGE.
  */
 
-#ifndef CONFVAR_H
-#define	CONFVAR_H
+#ifndef CONFCTL_H
+#define	CONFCTL_H
 
 #include <stdio.h>
 
 struct confctl;
 struct confctl_var;
 
-struct confctl	*confctl_init(bool rewrite_in_place);
-void		confctl_load(struct confctl *cc, const char *path);
-void		confctl_save(struct confctl *cc, const char *path);
-void		confctl_print_lines(struct confctl *cc, FILE *fp, bool values_only);
+struct confctl		*confctl_init(bool rewrite_in_place);
+void			confctl_load(struct confctl *cc, const char *path);
+void			confctl_save(struct confctl *cc, const char *path);
 struct confctl_var	*confctl_root(struct confctl *cc);
-struct confctl_var	*confctl_var_from_line(const char *line);
-void		confctl_var_merge(struct confctl_var **cvp, struct confctl_var *merge);
-void		confctl_var_remove(struct confctl_var *cv, struct confctl_var *remove);
-void		confctl_var_filter(struct confctl_var *cv, struct confctl_var *filter);
 
-#endif /* !CONFVAR_H */
+const char		*confctl_var_name(struct confctl_var *cv);
+const char		*confctl_var_value(struct confctl_var *cv);
+void			confctl_var_set_value(struct confctl_var *cv, const char *value);
+bool			confctl_var_is_container(const struct confctl_var *cv);
+struct confctl_var	*confctl_var_first_child(struct confctl_var *parent);
+struct confctl_var	*confctl_var_next(struct confctl_var *cv);
+struct confctl_var	*confctl_var_new(struct confctl_var *parent, const char *name);
+void			confctl_var_delete(struct confctl_var *cv);
+
+/*
+ * XXX: move to confctl.c, it's confctl(1)-specific.
+ */
+struct confctl_var	*confctl_var_from_line(const char *line);
+
+/*
+ * XXX: don't export these.
+ */
+struct confctl_var	*cv_new_root(void);
+void			cv_reindent(struct confctl_var *cv);
+
+#endif /* !CONFCTL_H */

@@ -33,14 +33,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <vis.h>
 
 #include "queue.h"
+#include "vis.h"
 
 #include "confctl.h"
 #include "confctl_private.h"
-
-static void	confctl_print_c(struct confctl *cc, FILE *fp);
 
 static struct buf *
 buf_new(void)
@@ -128,19 +126,6 @@ buf_print(struct buf *b, FILE *fp)
 		err(1, "fwrite");
 }
 
-static char *
-buf_vis(struct buf *b)
-{
-	char *dst;
-
-	dst = malloc(b->b_len * 4 + 1);
-	if (dst == NULL)
-		err(1, "malloc");
-	strvis(dst, b->b_buf, VIS_NL | VIS_CSTYLE);
-
-	return (dst);
-}
-
 static void
 buf_unvis(struct buf *b)
 {
@@ -158,13 +143,6 @@ buf_unvis(struct buf *b)
 	free(dst);
 	b->b_len = len;
 	buf_finish(b);
-}
-
-static struct buf *
-buf_dup(const struct buf *b)
-{
-
-	return (buf_new_from_str(b->b_buf));
 }
 
 static void
@@ -201,7 +179,7 @@ cv_new(struct confctl_var *parent, struct buf *name)
 	return (cv);
 }
 
-static struct confctl_var *
+struct confctl_var *
 cv_new_root(void)
 {
 	struct confctl_var *cv;
@@ -209,24 +187,6 @@ cv_new_root(void)
 	cv = cv_new(NULL, buf_new_from_str("HKEY_CLASSES_ROOT"));
 
 	return (cv);
-}
-
-static void
-cv_delete(struct confctl_var *cv)
-{
-	struct confctl_var *child;
-
-	TAILQ_FOREACH(child, &cv->cv_children, cv_next)
-		cv_delete(child);
-
-	buf_delete(cv->cv_before);
-	buf_delete(cv->cv_name);
-	buf_delete(cv->cv_middle);
-	buf_delete(cv->cv_value);
-	buf_delete(cv->cv_after);
-
-	if (cv->cv_parent != NULL)
-		TAILQ_REMOVE(&cv->cv_parent->cv_children, cv, cv_next);
 }
 
 static struct buf *
@@ -697,6 +657,34 @@ cv_load(struct confctl_var *parent, FILE *fp)
 }
 
 static void
+cv_write(struct confctl_var *cv, FILE *fp)
+{
+	struct confctl_var *child;
+
+	if (cv->cv_filtered_out)
+		return;
+
+	buf_print(cv->cv_before, fp);
+	buf_print(cv->cv_name, fp);
+	buf_print(cv->cv_middle, fp);
+	TAILQ_FOREACH(child, &cv->cv_children, cv_next)
+		cv_write(child, fp);
+	buf_print(cv->cv_value, fp);
+	buf_print(cv->cv_after, fp);
+}
+
+static void
+confctl_write(struct confctl *cc, FILE *fp)
+{
+	struct confctl_var *cv, *child;
+
+	cv = confctl_root(cc);
+	TAILQ_FOREACH(child, &cv->cv_children, cv_next)
+		cv_write(child, fp);
+	buf_print(cv->cv_after, fp);
+}
+
+static void
 remove_tmpfile(const char *tmppath)
 {
 	int error, saved_errno;
@@ -720,7 +708,7 @@ confctl_save_in_place(struct confctl *cc, const char *path)
 	error = flock(fileno(fp), LOCK_EX);
 	if (error != 0)
 		err(1, "unable to lock %s", path);
-	confctl_print_c(cc, fp);
+	confctl_write(cc, fp);
 	error = fflush(fp);
 	if (error != 0)
 		err(1, "fflush");
@@ -753,7 +741,7 @@ confctl_save_atomic(struct confctl *cc, const char *path)
 		remove_tmpfile(tmppath);
 		err(1, "fdopen");
 	}
-	confctl_print_c(cc, fp);
+	confctl_write(cc, fp);
 	error = fflush(fp);
 	if (error != 0) {
 		remove_tmpfile(tmppath);
@@ -783,88 +771,13 @@ confctl_var_save(struct confctl_var *cv, const char *path, bool in_place)
 
 }
 
-static bool
-cv_is_container(const struct confctl_var *cv)
+bool
+confctl_var_is_container(const struct confctl_var *cv)
 {
 
 	if (cv->cv_value == NULL)
 		return (true);
 	return (false);
-}
-
-static void
-cv_print_c(struct confctl_var *cv, FILE *fp)
-{
-	struct confctl_var *child;
-
-	if (cv->cv_filtered_out)
-		return;
-
-	buf_print(cv->cv_before, fp);
-	buf_print(cv->cv_name, fp);
-	buf_print(cv->cv_middle, fp);
-	TAILQ_FOREACH(child, &cv->cv_children, cv_next)
-		cv_print_c(child, fp);
-	buf_print(cv->cv_value, fp);
-	buf_print(cv->cv_after, fp);
-}
-
-static void
-confctl_print_c(struct confctl *cc, FILE *fp)
-{
-	struct confctl_var *cv, *child;
-
-	cv = confctl_root(cc);
-	TAILQ_FOREACH(child, &cv->cv_children, cv_next)
-		cv_print_c(child, fp);
-	buf_print(cv->cv_after, fp);
-}
-
-static void
-cv_print_lines(struct confctl_var *cv, FILE *fp, const char *prefix, bool values_only)
-{
-	struct confctl_var *child;
-	char *newprefix, *name, *value;
-
-	if (cv->cv_filtered_out)
-		return;
-
-	if (cv_is_container(cv)) {
-		name = buf_vis(cv->cv_name);
-		if (prefix != NULL)
-			asprintf(&newprefix, "%s.%s", prefix, name);
-		else
-			asprintf(&newprefix, "%s", name);
-		free(name);
-		if (newprefix == NULL)
-			err(1, "asprintf");
-		TAILQ_FOREACH(child, &cv->cv_children, cv_next)
-			cv_print_lines(child, fp, newprefix, values_only);
-		free(newprefix);
-	} else {
-		value = buf_vis(cv->cv_value);
-		if (values_only) {
-			fprintf(fp, "%s\n", value);
-		} else {
-			name = buf_vis(cv->cv_name);
-			if (prefix != NULL)
-				fprintf(fp, "%s.%s=%s\n", prefix, name, value);
-			else
-				fprintf(fp, "%s=%s\n", name, value);
-			free(name);
-		}
-		free(value);
-	}
-}
-
-void
-confctl_print_lines(struct confctl *cc, FILE *fp, bool values_only)
-{
-	struct confctl_var *cv, *child;
-
-	cv = confctl_root(cc);
-	TAILQ_FOREACH(child, &cv->cv_children, cv_next)
-		cv_print_lines(child, fp, NULL, values_only);
 }
 
 struct confctl_var *
@@ -951,7 +864,7 @@ buf_get_indent(struct confctl_var *cv)
 	return (b);
 }
 
-static void
+void
 cv_reindent(struct confctl_var *cv)
 {
 	struct buf *b = NULL;
@@ -971,7 +884,7 @@ cv_reindent(struct confctl_var *cv)
 	}
 	cv->cv_before = b;
 
-	if (cv_is_container(cv)) {
+	if (confctl_var_is_container(cv)) {
 		cv->cv_middle = buf_new_from_str(" {");
 		cv->cv_after = buf_new_from_str(cv->cv_before->b_buf);
 		buf_append(cv->cv_after, '}');
@@ -980,153 +893,6 @@ cv_reindent(struct confctl_var *cv)
 		TAILQ_FOREACH(child, &cv->cv_children, cv_next)
 			cv_reindent(child);
 	}
-}
-
-static void
-cv_merge_existing(struct confctl_var *cv, struct confctl_var *newcv)
-{
-	struct confctl_var *child, *newchild, *tmp, *newtmp;
-
-	if (strcmp(cv->cv_name->b_buf, newcv->cv_name->b_buf) != 0)
-		return;
-
-	if (!cv_is_container(newcv)) {
-		if (cv_is_container(cv))
-			errx(1, "cannot replace container node with leaf node");
-		if (cv->cv_middle->b_len == 0)
-			cv->cv_middle = buf_dup(newcv->cv_middle);
-		cv->cv_value = buf_dup(newcv->cv_value);
-		/*
-		 * Mark the node as done, so that we won't try
-		 * to add it in cv_merge_new().
-		 */
-		newcv->cv_filtered_out = true;
-		return;
-	}
-
-	TAILQ_FOREACH_SAFE(newchild, &newcv->cv_children, cv_next, newtmp) {
-		TAILQ_FOREACH_SAFE(child, &cv->cv_children, cv_next, tmp)
-			cv_merge_existing(child, newchild);
-	}
-}
-
-static void
-cv_reparent(struct confctl_var *cv, struct confctl_var *parent)
-{
-
-	if (cv->cv_parent != NULL)
-		TAILQ_REMOVE(&cv->cv_parent->cv_children, cv, cv_next);
-	cv->cv_parent = parent;
-	TAILQ_INSERT_TAIL(&parent->cv_children, cv, cv_next);
-	cv_reindent(cv);
-}
-
-static bool
-cv_merge_new(struct confctl_var *cv, struct confctl_var *newcv)
-{
-	struct confctl_var *child, *newchild, *tmp, *newtmp;
-	bool found;
-
-	if (strcmp(cv->cv_name->b_buf, newcv->cv_name->b_buf) != 0)
-		return (false);
-
-	if (newcv->cv_filtered_out)
-		return (true);
-
-	TAILQ_FOREACH_SAFE(newchild, &newcv->cv_children, cv_next, newtmp) {
-		found = false;
-		TAILQ_FOREACH_SAFE(child, &cv->cv_children, cv_next, tmp) {
-			found = cv_merge_new(child, newchild);
-			if (found)
-				break;
-		}
-		if (!found)
-			cv_reparent(newchild, cv);
-	}
-
-	return (true);
-}
-
-void
-confctl_var_merge(struct confctl_var **cvp, struct confctl_var *merge)
-{
-
-	if (*cvp == NULL)
-		*cvp = cv_new_root();
-
-	/*
-	 * Reason for doing it in two steps is that we need
-	 * to correctly handle duplicate nodes, such as this:
-	 * "1 { foo } 2 { bar } 1 { baz }".  In this case,
-	 * when merging '1.baz', we want to update the existing
-	 * node, not add a new sibling to "foo".
-	 */
-	cv_merge_existing(*cvp, merge);
-	cv_merge_new(*cvp, merge);
-}
-
-void
-confctl_var_remove(struct confctl_var *cv, struct confctl_var *remove)
-{
-	struct confctl_var *child, *removechild, *tmp;
-
-	if (remove->cv_value != NULL)
-		errx(1, "variable to remove must not specify a value");
-
-	if (strcmp(remove->cv_name->b_buf, cv->cv_name->b_buf) != 0)
-		return;
-
-	if (TAILQ_EMPTY(&remove->cv_children)) {
-		cv_delete(cv);
-	} else {
-		TAILQ_FOREACH_SAFE(child, &cv->cv_children, cv_next, tmp) {
-			TAILQ_FOREACH(removechild, &remove->cv_children, cv_next)
-				confctl_var_remove(child, removechild);
-		}
-	}
-
-	if (cv->cv_delete_when_empty && TAILQ_EMPTY(&cv->cv_children))
-		cv_delete(cv);
-}
-
-static bool
-cv_filter(struct confctl_var *cv, struct confctl_var *filter)
-{
-	struct confctl_var *child, *filterchild;
-	bool found;
-
-	if (filter->cv_value != NULL)
-		errx(1, "filter must not specify a value");
-
-	if (strcmp(filter->cv_name->b_buf, cv->cv_name->b_buf) != 0)
-		return (false);
-
-	TAILQ_FOREACH(child, &cv->cv_children, cv_next) {
-		if (TAILQ_EMPTY(&filter->cv_children)) {
-			found = true;
-		} else {
-			found = false;
-			TAILQ_FOREACH(filterchild, &filter->cv_children, cv_next) {
-				if (cv_filter(child, filterchild))
-					found = true;
-			}
-		}
-		if (found)
-			child->cv_filtered_out = false;
-		else
-			child->cv_filtered_out = true;
-	}
-
-	return (true);
-}
-
-void
-confctl_var_filter(struct confctl_var *cv, struct confctl_var *filter)
-{
-	bool found;
-
-	found = cv_filter(cv, filter);
-	assert(found);
 }
 
 struct confctl *
@@ -1195,3 +961,75 @@ confctl_root(struct confctl *cc)
 
 	return (cc->cc_root);
 }
+
+const char *
+confctl_var_name(struct confctl_var *cv)
+{
+	
+	if (cv->cv_name == NULL)
+		return (NULL);
+	return (cv->cv_name->b_buf);
+}
+
+const char *
+confctl_var_value(struct confctl_var *cv)
+{
+
+	assert(!confctl_var_is_container(cv));
+
+	if (cv->cv_value == NULL)
+		return (NULL);
+	return (cv->cv_value->b_buf);
+}
+
+void
+confctl_var_set_value(struct confctl_var *cv, const char *value)
+{
+
+	assert(!confctl_var_is_container(cv));
+
+	buf_delete(cv->cv_value);
+	cv->cv_value = buf_new_from_str(value);
+}
+
+struct confctl_var *
+confctl_var_first_child(struct confctl_var *cv)
+{
+
+	assert(confctl_var_is_container(cv));
+
+	return (TAILQ_FIRST(&cv->cv_children));
+}
+
+struct confctl_var *
+confctl_var_next(struct confctl_var *cv)
+{
+
+	return (TAILQ_NEXT(cv, cv_next));
+}
+
+struct confctl_var *
+confctl_var_new(struct confctl_var *parent, const char *name)
+{
+
+	return (cv_new(parent, buf_new_from_str(name)));
+}
+
+void
+confctl_var_delete(struct confctl_var *cv)
+{
+	struct confctl_var *child;
+
+	TAILQ_FOREACH(child, &cv->cv_children, cv_next)
+		confctl_var_delete(child);
+
+	buf_delete(cv->cv_before);
+	buf_delete(cv->cv_name);
+	buf_delete(cv->cv_middle);
+	buf_delete(cv->cv_value);
+	buf_delete(cv->cv_after);
+
+	if (cv->cv_parent != NULL)
+		TAILQ_REMOVE(&cv->cv_parent->cv_children, cv, cv_next);
+}
+
