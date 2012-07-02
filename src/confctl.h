@@ -29,17 +29,18 @@
 #include <stdio.h>
 
 /*
- * 'struct confctl' represents the configuration tree.
+ * 'struct confctl' represents the whole configuration tree.
  */
 struct confctl;
 
 /*
  * 'struct confctl_var' represents a single node in the configuration tree.
- * Every node has a name, which can be empty, and either value, or children.
+ * Every node has a name, which can be empty, and either a value, or children.
  */
 struct confctl_var;
 
 struct confctl		*confctl_new(void);
+void			confctl_set_equals_sign(struct confctl *cc, bool equals);
 void			confctl_set_rewrite_in_place(struct confctl *cc, bool rewrite);
 void			confctl_set_slash_slash_comments(struct confctl *cc, bool slash);
 void			confctl_load(struct confctl *cc, const char *path);

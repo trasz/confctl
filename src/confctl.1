@@ -5,19 +5,19 @@
 .SH NAME
 confctl \- sysctl-like tool for config files
 .SH SYNOPSIS
-.B confctl [-CI] -a [-n]
+.B confctl [-CEI] -a [-n]
 .I config-file
 .br
-.B confctl [-CI] [-n]
+.B confctl [-CEI] [-n]
 .I config-file
 .I variable-name
 .B ...
 .br
-.B confctl [-CI] -w
+.B confctl [-CEI] -w
 .I variable-name=value
 .I config-file
 .br
-.B confctl [-CI] -x
+.B confctl [-CEI] -x
 .I variable-name
 .I config-file
 .SH DESCRIPTION
@@ -40,6 +40,8 @@ Variable is created if it doesn't yet exist.
 Delete the variable and update the configuration file.
 .IP -C
 Recognize double slash ('//') as a comment.
+.IP -E
+Use equals sign (' = ') to separate values from names.
 .IP -I
 Instead of writing a temporary file and then atomically replacing
 the configuration file, rewrite it in place.

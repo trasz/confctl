@@ -1,8 +1,6 @@
 Things to do before 1.1:
 
- - Add an option (-E, perhaps) to use '=' as a separator between
-   name and value.  This requires mimicking cv_middle from existing
-   entries.
+ - Make -E actually enforce requirement for '=' sign when parsing.
 
  - Add an option (-S, perhaps) to use semicolon after entry.
    This would also change the way line continuation works
@@ -31,4 +29,6 @@ Things to do before calling it done:
    Add an option to make them as values without names, like this:
    'meh=1\n meh=2\n meh=3'.  This would make nicer output for
    JunOS-like config.
+
+ - The whole cv_reindent() looks fishy.
 

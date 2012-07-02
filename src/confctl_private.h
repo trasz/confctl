@@ -51,6 +51,7 @@ struct confctl_var {
 	struct confctl_var		*cv_parent;
 	void				*cv_uptr;
 	bool				cv_delete_when_empty:1;
+	bool				cv_needs_reindent:1;
 	TAILQ_HEAD(confctl_var_head, confctl_var)	cv_children;
 };
 
@@ -60,6 +61,7 @@ struct confctl_var {
  */
 struct confctl {
 	struct confctl_var	*cc_root;
+	bool			cc_equals_sign;
 	bool			cc_rewrite_in_place;
 	bool			cc_slash_slash_comments;
 };

@@ -168,6 +168,7 @@ cv_new(struct confctl_var *parent, struct buf *name)
 	assert(name != NULL);
 
 	if (parent != NULL) {
+		// XXX: confctl_var_is_container()?
 		assert(parent->cv_value == NULL);
 		cv->cv_parent = parent;
 		TAILQ_INSERT_TAIL(&parent->cv_children, cv, cv_next);
@@ -652,16 +653,95 @@ cv_load(const struct confctl *cc, struct confctl_var *parent, FILE *fp)
 	return (false);
 }
 
+static struct buf *
+buf_get_indent(struct confctl_var *cv)
+{
+	struct buf *b;
+	int i;
+
+	b = cv->cv_before;
+	if (b == NULL || b->b_len <= 1)
+		return (NULL);
+
+	for (i = b->b_len; i >= 0; i--) {
+		if (b->b_buf[i] == '\n' || b->b_buf[i] == '\r')
+			break;
+	}
+
+	b = buf_new_from_str(b->b_buf + i);
+
+	return (b);
+}
+
 static void
-cv_write(struct confctl_var *cv, FILE *fp)
+cv_reindent(struct confctl *cc, struct confctl_var *cv)
+{
+	struct buf *b = NULL;
+	struct confctl_var *prev, *child;
+
+	/*
+	 * Check for cv_parent, as we don't want to add brackets for the root element.
+	 */
+	if (cv->cv_parent == NULL)
+		return;
+
+	if (cv->cv_before == NULL) {
+		prev = TAILQ_PREV(cv, confctl_var_head, cv_next);
+		if (prev != NULL)
+			b = buf_get_indent(prev);
+		if (b == NULL) {
+			b = buf_get_indent(cv->cv_parent);
+			if (b == NULL)
+				b = buf_new_from_str("\n");
+			if (cv->cv_parent->cv_parent != NULL) {
+				buf_append(b, '\t');
+				buf_finish(b);
+			}
+		}
+		cv->cv_before = b;
+	}
+
+	if (confctl_var_is_container(cv)) {
+		if (confctl_var_first_child(cv) != NULL) {
+			/*
+			 * XXX: check before appending brackets.
+			 */
+			cv->cv_middle = buf_new_from_str(" {");
+			if (cv->cv_before != NULL)
+				cv->cv_after = buf_new_from_str(cv->cv_before->b_buf);
+			buf_append(cv->cv_after, '}');
+			buf_finish(cv->cv_after);
+		}
+	} else {
+		if (cv->cv_value != NULL && cv->cv_value->b_len > 0 && (cv->cv_middle == NULL || cv->cv_middle->b_len == 0)) {
+			if (cc->cc_equals_sign)
+				cv->cv_middle = buf_new_from_str(" = ");
+			else
+				cv->cv_middle = buf_new_from_str(" ");
+		}
+	}
+}
+
+static void
+cv_write(struct confctl *cc, struct confctl_var *cv, FILE *fp, bool reindent_anyway)
 {
 	struct confctl_var *child;
 
+	/*
+	 * Reindent nodes marked with cv_needs_reindent, along with all its children,
+	 * whether marked or not.
+	 */
+	if (cv->cv_needs_reindent || reindent_anyway) {
+		cv_reindent(cc, cv);
+		reindent_anyway = true;
+	}
+
 	buf_print(cv->cv_before, fp);
-	buf_print(cv->cv_name, fp);
+	if (confctl_root(cc) != cv) /* XXX */
+		buf_print(cv->cv_name, fp);
 	buf_print(cv->cv_middle, fp);
 	TAILQ_FOREACH(child, &cv->cv_children, cv_next)
-		cv_write(child, fp);
+		cv_write(cc, child, fp, reindent_anyway);
 	buf_print(cv->cv_value, fp);
 	buf_print(cv->cv_after, fp);
 }
@@ -669,12 +749,8 @@ cv_write(struct confctl_var *cv, FILE *fp)
 static void
 confctl_write(struct confctl *cc, FILE *fp)
 {
-	struct confctl_var *cv, *child;
 
-	cv = confctl_root(cc);
-	TAILQ_FOREACH(child, &cv->cv_children, cv_next)
-		cv_write(child, fp);
-	buf_print(cv->cv_after, fp);
+	cv_write(cc, confctl_root(cc), fp, false);
 }
 
 static void
@@ -787,7 +863,6 @@ confctl_from_line(const char *line)
 			buf_finish(b);
 			buf_unvis(b);
 			cv = cv_new(parent, b);
-			cv->cv_middle = buf_new_from_str(" ");
 			return (root);
 		}
 		if (escaped) {
@@ -811,7 +886,6 @@ confctl_from_line(const char *line)
 			buf_finish(b);
 			buf_unvis(b);
 			cv = cv_new(parent, b);
-			cv->cv_middle = buf_new_from_str(" ");
 			b = buf_new();
 			if (ch == '.') {
 				parent = cv;
@@ -833,57 +907,6 @@ confctl_from_line(const char *line)
 	}
 }
 
-static struct buf *
-buf_get_indent(struct confctl_var *cv)
-{
-	struct buf *b;
-	int i;
-
-	b = cv->cv_before;
-	if (b == NULL || b->b_len <= 1)
-		return (NULL);
-
-	for (i = b->b_len; i >= 0; i--) {
-		if (b->b_buf[i] == '\n' || b->b_buf[i] == '\r')
-			break;
-	}
-
-	b = buf_new_from_str(b->b_buf + i);
-
-	return (b);
-}
-
-void
-cv_reindent(struct confctl_var *cv)
-{
-	struct buf *b = NULL;
-	struct confctl_var *prev, *child;
-
-	prev = TAILQ_PREV(cv, confctl_var_head, cv_next);
-	if (prev != NULL)
-		b = buf_get_indent(prev);
-	if (b == NULL) {
-		b = buf_get_indent(cv->cv_parent);
-		if (b == NULL)
-			b = buf_new_from_str("\n");
-		if (cv->cv_parent->cv_parent != NULL) {
-			buf_append(b, '\t');
-			buf_finish(b);
-		}
-	}
-	cv->cv_before = b;
-
-	if (confctl_var_is_container(cv)) {
-		cv->cv_middle = buf_new_from_str(" {");
-		cv->cv_after = buf_new_from_str(cv->cv_before->b_buf);
-		buf_append(cv->cv_after, '}');
-		buf_finish(cv->cv_after);
-
-		TAILQ_FOREACH(child, &cv->cv_children, cv_next)
-			cv_reindent(child);
-	}
-}
-
 struct confctl *
 confctl_new(void)
 {
@@ -895,6 +918,13 @@ confctl_new(void)
 	cc->cc_root = cv_new_root();
 
 	return (cc);
+}
+
+void
+confctl_set_equals_sign(struct confctl *cc, bool equals)
+{
+
+	cc->cc_equals_sign = equals;
 }
 
 void
@@ -991,10 +1021,10 @@ confctl_var_set_value(struct confctl_var *cv, const char *value)
 	buf_delete(cv->cv_value);
 	cv->cv_value = buf_new_from_str(value);
 
-	if (cv->cv_middle->b_len == 0) {
-		buf_append(cv->cv_middle, ' ');
-		buf_finish(cv->cv_middle);
-	}
+	/*
+	 * Variable will need proper cv_middle.
+	 */
+	cv->cv_needs_reindent = true;
 }
 
 struct confctl_var *
@@ -1014,8 +1044,23 @@ confctl_var_next(struct confctl_var *cv)
 struct confctl_var *
 confctl_var_new(struct confctl_var *parent, const char *name)
 {
+	struct confctl_var *cv;
 
-	return (cv_new(parent, buf_new_from_str(name)));
+	assert(parent != NULL);
+	assert(confctl_var_is_container(parent));
+
+	cv = cv_new(parent, buf_new_from_str(name));
+
+	/*
+	 * If the parent didn't have any children, it might not have
+	 * the brackets ('{' and '}') in cv_middle and cv_after.
+	 * In any case, the newly added variable needs reindent as well.
+	 */
+	if (TAILQ_EMPTY(&parent->cv_children))
+		parent->cv_needs_reindent = true;
+	cv->cv_needs_reindent = true;
+
+	return (cv);
 }
 
 void
@@ -1040,11 +1085,22 @@ void
 confctl_var_move(struct confctl_var *cv, struct confctl_var *parent)
 {
 
+	assert(parent != NULL);
+	assert(confctl_var_is_container(parent));
+
+	/*
+	 * If the parent didn't have any children, it might not have
+	 * the brackets ('{' and '}') in cv_middle and cv_after.
+	 * In any case, the newly added variable needs reindent as well.
+	 */
+	if (TAILQ_EMPTY(&parent->cv_children))
+		parent->cv_needs_reindent = true;
+	cv->cv_needs_reindent = true;
+
 	if (cv->cv_parent != NULL)
 		TAILQ_REMOVE(&cv->cv_parent->cv_children, cv, cv_next);
 	cv->cv_parent = parent;
 	TAILQ_INSERT_TAIL(&parent->cv_children, cv, cv_next);
-	cv_reindent(cv);
 }
 
 bool
