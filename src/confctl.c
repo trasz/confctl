@@ -340,7 +340,6 @@ main(int argc, char **argv)
 	int ch, i;
 	bool aflag = false, Iflag = false, nflag = false;
 	struct confctl *cc, *line, *merge = NULL, *remove = NULL, *filter = NULL;
-	struct confctl_var *root;
 
 	if (argc <= 1)
 		usage();
@@ -394,7 +393,6 @@ main(int argc, char **argv)
 	cc = confctl_new();
 	confctl_set_rewrite_in_place(cc, Iflag);
 	confctl_load(cc, argv[0]);
-	root = confctl_root(cc);
 	if (merge == NULL && remove == NULL) {
 		if (!aflag) {
 			for (i = 1; i < argc; i++) {
