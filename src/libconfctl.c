@@ -987,6 +987,11 @@ confctl_var_set_value(struct confctl_var *cv, const char *value)
 
 	buf_delete(cv->cv_value);
 	cv->cv_value = buf_new_from_str(value);
+
+	if (cv->cv_middle->b_len == 0) {
+		buf_append(cv->cv_middle, ' ');
+		buf_finish(cv->cv_middle);
+	}
 }
 
 struct confctl_var *
