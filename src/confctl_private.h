@@ -61,6 +61,7 @@ struct confctl_var {
 struct confctl {
 	struct confctl_var	*cc_root;
 	bool			cc_rewrite_in_place;
+	bool			cc_slash_slash_comments;
 };
 
 #endif /* !CONFCTL_PRIVATE_H */

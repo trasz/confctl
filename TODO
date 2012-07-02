@@ -1,7 +1,5 @@
 Things to do before 1.1:
 
- - Add an option (-C, perhaps), to recognize '//' as a comment.
-
  - Add an option (-E, perhaps) to use '=' as a separator between
    name and value.  This requires mimicking cv_middle from existing
    entries.

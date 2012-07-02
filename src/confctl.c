@@ -39,10 +39,10 @@ static void
 usage(void)
 {
 
-	fprintf(stderr, "usage: confctl [-In] config-path [name...]\n");
-	fprintf(stderr, "       confctl [-In] -a config-path\n");
-	fprintf(stderr, "       confctl [-I] -w name=value config-path\n");
-	fprintf(stderr, "       confctl [-I] -x name config-path\n");
+	fprintf(stderr, "usage: confctl [-CIn] config-path [name...]\n");
+	fprintf(stderr, "       confctl [-CIn] -a config-path\n");
+	fprintf(stderr, "       confctl [-CI] -w name=value config-path\n");
+	fprintf(stderr, "       confctl [-CI] -x name config-path\n");
 	exit(1);
 }
 
@@ -341,16 +341,19 @@ int
 main(int argc, char **argv)
 {
 	int ch, i;
-	bool aflag = false, Iflag = false, nflag = false;
+	bool aflag = false, Cflag = false, Iflag = false, nflag = false;
 	struct confctl *cc, *line, *merge = NULL, *remove = NULL, *filter = NULL;
 
 	if (argc <= 1)
 		usage();
 
-	while ((ch = getopt(argc, argv, "aInw:x:")) != -1) {
+	while ((ch = getopt(argc, argv, "aCInw:x:")) != -1) {
 		switch (ch) {
 		case 'a':
 			aflag = true;
+			break;
+		case 'C':
+			Cflag = true;
 			break;
 		case 'I':
 			Iflag = true;
@@ -395,6 +398,7 @@ main(int argc, char **argv)
 
 	cc = confctl_new();
 	confctl_set_rewrite_in_place(cc, Iflag);
+	confctl_set_slash_slash_comments(cc, Cflag);
 	confctl_load(cc, argv[0]);
 	if (merge == NULL && remove == NULL) {
 		if (!aflag) {

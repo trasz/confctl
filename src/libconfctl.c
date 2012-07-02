@@ -190,7 +190,7 @@ cv_new_root(void)
 }
 
 static struct buf *
-buf_read_before(FILE *fp, bool *closing_bracket)
+buf_read_before(const struct confctl *cc, FILE *fp, bool *closing_bracket)
 {
 	int ch;
 	struct buf *b;
@@ -224,20 +224,20 @@ buf_read_before(FILE *fp, bool *closing_bracket)
 			buf_append(b, ch);
 			continue;
 		}
-#ifdef SLASH_SLASH
-		/*
-		 * Handle "// comments".
-		 */
-		if (ch == '/') {
-			if (slashed) {
-				slashed = false;
-				comment = true;
-			} else
-				slashed = true;
-			buf_append(b, ch);
-			continue;
+		if (cc->cc_slash_slash_comments) {
+			/*
+			 * Handle "// comments".
+			 */
+			if (ch == '/') {
+				if (slashed) {
+					slashed = false;
+					comment = true;
+				} else
+					slashed = true;
+				buf_append(b, ch);
+				continue;
+			}
 		}
-#endif
 		/*
 		 * This is somewhat tricky - this piece of code is also used
 		 * to parse junk that will become cv_after of the parent
@@ -271,15 +271,11 @@ unget:
 }
 
 static struct buf *
-buf_read_name(FILE *fp)
+buf_read_name(const struct confctl *cc, FILE *fp)
 {
 	int ch;
 	struct buf *b;
-#ifdef SLASH_SLASH
 	bool escaped = false, quoted = false, squoted = false, slashed = false;
-#else
-	bool escaped = false, quoted = false, squoted = false;
-#endif
 
 	b = buf_new();
 
@@ -295,10 +291,10 @@ buf_read_name(FILE *fp)
 			escaped = false;
 			continue;
 		}
-#ifdef SLASH_SLASH
-		if (ch != '/')
-			slashed = false;
-#endif
+		if (cc->cc_slash_slash_comments) {
+			if (ch != '/')
+				slashed = false;
+		}
 		if (ch == '\\') {
 			escaped = true;
 			buf_append(b, ch);
@@ -318,24 +314,24 @@ buf_read_name(FILE *fp)
 				err(1, "ungetc");
 			break;
 		}
-#ifdef SLASH_SLASH
-		/*
-		 * Handle "// comments".
-		 */
-		if (ch == '/') {
-			if (slashed) {
-				ch = ungetc(ch, fp);
-				if (ch == EOF)
-					err(1, "ungetc");
-				buf_strip(b);
-				ch = ungetc('/', fp);
-				if (ch == EOF)
-					err(1, "ungetc");
-				break;
+		if (cc->cc_slash_slash_comments) {
+			/*
+			 * Handle "// comments".
+			 */
+			if (ch == '/') {
+				if (slashed) {
+					ch = ungetc(ch, fp);
+					if (ch == EOF)
+						err(1, "ungetc");
+					buf_strip(b);
+					ch = ungetc('/', fp);
+					if (ch == EOF)
+						err(1, "ungetc");
+					break;
+				}
+				slashed = true;
 			}
-			slashed = true;
 		}
-#endif
 		buf_append(b, ch);
 	}
 	buf_finish(b);
@@ -344,7 +340,7 @@ buf_read_name(FILE *fp)
 }
 
 static struct buf *
-buf_read_middle(FILE *fp, bool *opening_bracket)
+buf_read_middle(const struct confctl *cc, FILE *fp, bool *opening_bracket)
 {
 	int ch;
 	struct buf *b;
@@ -428,7 +424,7 @@ buf_read_middle(FILE *fp, bool *opening_bracket)
 }
 
 static struct buf *
-buf_read_value(FILE *fp, bool *opening_bracket)
+buf_read_value(const struct confctl *cc, FILE *fp, bool *opening_bracket)
 {
 	int ch;
 	struct buf *b;
@@ -494,10 +490,10 @@ buf_read_value(FILE *fp, bool *opening_bracket)
 			}
 			break;
 		}
-#ifdef SLASH_SLASH
-		if (ch == '/')
-			slashed = true;
-#endif
+		if (cc->cc_slash_slash_comments) {
+			if (ch == '/')
+				slashed = true;
+		}
 		buf_append(b, ch);
 	}
 	buf_finish(b);
@@ -506,7 +502,7 @@ buf_read_value(FILE *fp, bool *opening_bracket)
 }
 
 static struct buf *
-buf_read_after(FILE *fp)
+buf_read_after(const struct confctl *cc, FILE *fp)
 {
 	int ch;
 	struct buf *b;
@@ -538,20 +534,20 @@ buf_read_after(FILE *fp)
 			buf_append(b, ch);
 			continue;
 		}
-#ifdef SLASH_SLASH
-		/*
-		 * Handle "// comments".
-		 */
-		if (ch == '/') {
-			if (slashed) {
-				slashed = false;
-				comment = true;
-			} else
-				slashed = true;
-			buf_append(b, ch);
-			continue;
+		if (cc->cc_slash_slash_comments) {
+			/*
+			 * Handle "// comments".
+			 */
+			if (ch == '/') {
+				if (slashed) {
+					slashed = false;
+					comment = true;
+				} else
+					slashed = true;
+				buf_append(b, ch);
+				continue;
+			}
 		}
-#endif
 		if (isspace(ch) || ch == ';') {
 			buf_append(b, ch);
 			continue;
@@ -574,7 +570,7 @@ unget:
 }
 
 static bool
-cv_load(struct confctl_var *parent, FILE *fp)
+cv_load(const struct confctl *cc, struct confctl_var *parent, FILE *fp)
 {
 	struct buf *before, *name, *middle, *value, *after;
 	bool closing_bracket, opening_bracket;
@@ -593,14 +589,14 @@ cv_load(struct confctl_var *parent, FILE *fp)
 	 *    |<before>||<name>||<middle>||<- name2 ->||<middle2>||<name3 >|
 	 */
 
-	before = buf_read_before(fp, &closing_bracket);
+	before = buf_read_before(cc, fp, &closing_bracket);
 	if (closing_bracket) {
 		parent->cv_after = before;
 		return (true);
 	}
 
-	name = buf_read_name(fp);
-	middle = buf_read_middle(fp, &opening_bracket);
+	name = buf_read_name(cc, fp);
+	middle = buf_read_middle(cc, fp, &opening_bracket);
 
 	cv = cv_new(parent, name);
 	cv->cv_before = before;
@@ -611,7 +607,7 @@ cv_load(struct confctl_var *parent, FILE *fp)
 		 * Case 2 - opening bracket after name.
 		 */
 		for (;;) {
-			closing_bracket = cv_load(cv, fp);
+			closing_bracket = cv_load(cc, cv, fp);
 			if (closing_bracket)
 				break;
 		}
@@ -619,7 +615,7 @@ cv_load(struct confctl_var *parent, FILE *fp)
 		/*
 		 * Case 1 or 3.
 		 */
-		value = buf_read_value(fp, &opening_bracket);
+		value = buf_read_value(cc, fp, &opening_bracket);
 		if (opening_bracket) {
 			/*
 			 * Case 3.
@@ -633,13 +629,13 @@ cv_load(struct confctl_var *parent, FILE *fp)
 			 */
 			cv->cv_delete_when_empty = true;
 
-			middle = buf_read_middle(fp, &opening_bracket);
+			middle = buf_read_middle(cc, fp, &opening_bracket);
 			assert(opening_bracket);
 			cv = cv_new(cv, value);
 			cv->cv_middle = middle;
 
 			for (;;) {
-				closing_bracket = cv_load(cv, fp);
+				closing_bracket = cv_load(cc, cv, fp);
 				if (closing_bracket)
 					break;
 			}
@@ -647,7 +643,7 @@ cv_load(struct confctl_var *parent, FILE *fp)
 			/*
 			 * Case 1.
 			 */
-			after = buf_read_after(fp);
+			after = buf_read_after(cc, fp);
 			cv->cv_value = value;
 			cv->cv_after = after;
 		}
@@ -908,6 +904,13 @@ confctl_set_rewrite_in_place(struct confctl *cc, bool rewrite)
 	cc->cc_rewrite_in_place = rewrite;
 }
 
+void
+confctl_set_slash_slash_comments(struct confctl *cc, bool slash)
+{
+
+	cc->cc_slash_slash_comments = slash;
+}
+
 void	
 confctl_load(struct confctl *cc, const char *path)
 {
@@ -926,7 +929,7 @@ confctl_load(struct confctl *cc, const char *path)
 	}
 
 	for (;;) {
-		done = cv_load(confctl_root(cc), fp);
+		done = cv_load(cc, confctl_root(cc), fp);
 		if (ferror(fp) != 0)
 			err(1, "read");
 		if (done)
