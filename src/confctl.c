@@ -165,7 +165,7 @@ cc_merge(struct confctl **cc, struct confctl *merge)
 	struct confctl_var *root, *mergeroot;
 
 	if (*cc == NULL)
-		*cc = confctl_new(false);
+		*cc = confctl_new();
 
 	root = confctl_root(*cc);
 	mergeroot = confctl_root(merge);
@@ -391,7 +391,8 @@ main(int argc, char **argv)
 	if (!aflag && !merge && !remove && argc == 1)
 		errx(1, "neither -a, -w, -x, or variable names specified");
 
-	cc = confctl_new(Iflag);
+	cc = confctl_new();
+	confctl_set_rewrite_in_place(cc, Iflag);
 	confctl_load(cc, argv[0]);
 	root = confctl_root(cc);
 	if (merge == NULL && remove == NULL) {

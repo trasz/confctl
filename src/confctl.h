@@ -39,7 +39,8 @@ struct confctl;
  */
 struct confctl_var;
 
-struct confctl		*confctl_new(bool rewrite_in_place);
+struct confctl		*confctl_new(void);
+void			confctl_set_rewrite_in_place(struct confctl *cc, bool rewrite);
 void			confctl_load(struct confctl *cc, const char *path);
 void			confctl_save(struct confctl *cc, const char *path);
 struct confctl_var	*confctl_root(struct confctl *cc);
@@ -59,7 +60,7 @@ void			*confctl_var_uptr(struct confctl_var *cv);
 void			confctl_var_set_uptr(struct confctl_var *cv, void *uptr);
 
 /*
- * XXX: move to confctl.c, it's confctl(1)-specific.
+ * XXX: Perhaps move to confctl.c; it looks specific to confctl(1).
  */
 struct confctl		*confctl_from_line(const char *line);
 

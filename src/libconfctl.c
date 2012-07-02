@@ -780,7 +780,7 @@ confctl_from_line(const char *line)
 	int i;
 	char ch;
 
-	root = confctl_new(false);
+	root = confctl_new();
 
 	parent = confctl_root(root);
 
@@ -889,17 +889,23 @@ cv_reindent(struct confctl_var *cv)
 }
 
 struct confctl *
-confctl_new(bool rewrite_in_place)
+confctl_new(void)
 {
 	struct confctl *cc;
 
 	cc = calloc(sizeof(*cc), 1);
 	if (cc == NULL)
 		err(1, "calloc");
-	cc->cc_rewrite_in_place = rewrite_in_place;
 	cc->cc_root = cv_new_root();
 
 	return (cc);
+}
+
+void
+confctl_set_rewrite_in_place(struct confctl *cc, bool rewrite)
+{
+
+	cc->cc_rewrite_in_place = rewrite;
 }
 
 void	

@@ -1,7 +1,5 @@
 Things to do before 1.1:
 
- - Make confvar.c a proper shared library.
-
  - Add an option (-C, perhaps), to recognize '//' as a comment.
 
  - Add an option (-E, perhaps) to use '=' as a separator between
