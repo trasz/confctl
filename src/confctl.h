@@ -28,10 +28,18 @@
 
 #include <stdio.h>
 
+/*
+ * 'struct confctl' represents the configuration tree.
+ */
 struct confctl;
+
+/*
+ * 'struct confctl_var' represents a single node in the configuration tree.
+ * Every node has a name, which can be empty, and either value, or children.
+ */
 struct confctl_var;
 
-struct confctl		*confctl_init(bool rewrite_in_place);
+struct confctl		*confctl_new(bool rewrite_in_place);
 void			confctl_load(struct confctl *cc, const char *path);
 void			confctl_save(struct confctl *cc, const char *path);
 struct confctl_var	*confctl_root(struct confctl *cc);
@@ -53,12 +61,6 @@ void			confctl_var_set_uptr(struct confctl_var *cv, void *uptr);
 /*
  * XXX: move to confctl.c, it's confctl(1)-specific.
  */
-struct confctl_var	*confctl_var_from_line(const char *line);
-
-/*
- * XXX: don't export these.
- */
-struct confctl_var	*cv_new_root(void);
-void			cv_reindent(struct confctl_var *cv);
+struct confctl		*confctl_from_line(const char *line);
 
 #endif /* !CONFCTL_H */

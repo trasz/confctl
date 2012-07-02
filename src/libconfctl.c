@@ -770,16 +770,19 @@ confctl_var_is_container(const struct confctl_var *cv)
 	return (false);
 }
 
-struct confctl_var *
-confctl_var_from_line(const char *line)
+struct confctl *
+confctl_from_line(const char *line)
 {
-	struct confctl_var *cv, *parent, *root;
+	struct confctl *root;
+	struct confctl_var *cv, *parent;
 	struct buf *b;
 	bool escaped = false, quoted = false, squoted = false;
 	int i;
 	char ch;
 
-	root = parent = cv_new_root();
+	root = confctl_new(false);
+
+	parent = confctl_root(root);
 
 	b = buf_new();
 	for (i = 0;; i++) {
@@ -886,7 +889,7 @@ cv_reindent(struct confctl_var *cv)
 }
 
 struct confctl *
-confctl_init(bool rewrite_in_place)
+confctl_new(bool rewrite_in_place)
 {
 	struct confctl *cc;
 

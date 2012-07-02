@@ -45,6 +45,11 @@ usage(void)
 	exit(1);
 }
 
+/*
+ * This is used for two purposes - first, instead of removing the nodes
+ * when selecting variables to display (e.g. 'confctl path some.variable');
+ * this is just a performance optimisation.  Second, to mark nodes when merging.
+ */
 static bool
 cv_filtered_out(struct confctl_var *cv)
 {
@@ -154,11 +159,15 @@ cv_merge_new(struct confctl_var *cv, struct confctl_var *newcv)
 }
 
 static void
-cc_var_merge(struct confctl_var **cvp, struct confctl_var *merge)
+cc_merge(struct confctl **cc, struct confctl *merge)
 {
+	struct confctl_var *root, *mergeroot;
 
-	if (*cvp == NULL)
-		*cvp = cv_new_root();
+	if (*cc == NULL)
+		*cc = confctl_new(false);
+
+	root = confctl_root(*cc);
+	mergeroot = confctl_root(merge);
 
 	/*
 	 * Reason for doing it in two steps is that we need
@@ -167,12 +176,12 @@ cc_var_merge(struct confctl_var **cvp, struct confctl_var *merge)
 	 * when merging '1.baz', we want to update the existing
 	 * node, not add a new sibling to "foo".
 	 */
-	cv_merge_existing(*cvp, merge);
-	cv_merge_new(*cvp, merge);
+	cv_merge_existing(root, mergeroot);
+	cv_merge_new(root, mergeroot);
 }
 
 static void
-cc_var_remove(struct confctl_var *cv, struct confctl_var *remove)
+cv_remove(struct confctl_var *cv, struct confctl_var *remove)
 {
 	struct confctl_var *child, *removechild, *next;
 
@@ -190,7 +199,7 @@ cc_var_remove(struct confctl_var *cv, struct confctl_var *remove)
 			next = confctl_var_next(next);
 
 			for (removechild = confctl_var_first_child(remove); removechild != NULL; removechild = confctl_var_next(removechild))
-				cc_var_remove(child, removechild);
+				cv_remove(child, removechild);
 
 			child = next;
 		}
@@ -198,6 +207,13 @@ cc_var_remove(struct confctl_var *cv, struct confctl_var *remove)
 
 	if (confctl_var_delete_when_empty(cv) && confctl_var_first_child(cv) == NULL)
 		confctl_var_delete(cv);
+}
+
+static void
+cc_remove(struct confctl *cc, struct confctl *remove)
+{
+
+	return (cv_remove(confctl_root(cc), confctl_root(remove)));
 }
 
 static bool
@@ -232,11 +248,11 @@ cv_filter(struct confctl_var *cv, struct confctl_var *filter)
 }
 
 static void
-cc_var_filter(struct confctl_var *cv, struct confctl_var *filter)
+cc_filter(struct confctl *cc, struct confctl *filter)
 {
 	bool found;
 
-	found = cv_filter(cv, filter);
+	found = cv_filter(confctl_root(cc), confctl_root(filter));
 	assert(found);
 }
 
@@ -322,8 +338,8 @@ main(int argc, char **argv)
 {
 	int ch, i;
 	bool aflag = false, Iflag = false, nflag = false;
-	struct confctl *cc;
-	struct confctl_var *root, *cv, *filter = NULL, *merge = NULL, *remove = NULL;
+	struct confctl *cc, *line, *merge = NULL, *remove = NULL, *filter = NULL;
+	struct confctl_var *root;
 
 	if (argc <= 1)
 		usage();
@@ -340,12 +356,12 @@ main(int argc, char **argv)
 			nflag = true;
 			break;
 		case 'w':
-			cv = confctl_var_from_line(optarg);
-			cc_var_merge(&merge, cv);
+			line = confctl_from_line(optarg);
+			cc_merge(&merge, line);
 			break;
 		case 'x':
-			cv = confctl_var_from_line(optarg);
-			cc_var_merge(&remove, cv);
+			line = confctl_from_line(optarg);
+			cc_merge(&remove, line);
 			break;
 		case '?':
 		default:
@@ -374,34 +390,40 @@ main(int argc, char **argv)
 	if (!aflag && !merge && !remove && argc == 1)
 		errx(1, "neither -a, -w, -x, or variable names specified");
 
-	cc = confctl_init(Iflag);
+	cc = confctl_new(Iflag);
 	confctl_load(cc, argv[0]);
 	root = confctl_root(cc);
 	if (merge == NULL && remove == NULL) {
 		if (!aflag) {
 			for (i = 1; i < argc; i++) {
-				cv = confctl_var_from_line(argv[i]);
-				cc_var_merge(&filter, cv);
+				line = confctl_from_line(argv[i]);
+				cc_merge(&filter, line);
 			}
-			cc_var_filter(root, filter);
+			cc_filter(cc, filter);
 		}
 		cc_print(cc, stdout, nflag);
 	} else {
 		/*
-		 * We're not using cc_var_filter() mechanism,
+		 * We're not using cv_filter() mechanism,
 		 * because we really want to remove the nodes here,
 		 * so that we can e.g. replace them by using -x
-		 * and -w together.  Also, cc_var_filter() works
+		 * and -w together.  Also, cv_filter() works
 		 * the other way around, exposing selected nodes
 		 * and hiding all the rest; we would need to 'invert'
 		 * the filter somehow.
 		 */
 		if (remove != NULL)
-			cc_var_remove(root, remove);
+			cc_remove(cc, remove);
 		if (merge != NULL)
-			cc_var_merge(&root, merge);
+			cc_merge(&cc, merge);
 		confctl_save(cc, argv[0]);
 	}
+
+	/*
+	 * Note - this code does not try to free anything, since it would
+	 * be useless for a program that does its job in short time and then
+	 * exits.
+	 */
 
 	return (0);
 }
