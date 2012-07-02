@@ -761,13 +761,6 @@ confctl_save_atomic(struct confctl *cc, const char *path)
 	}
 }
 
-void
-confctl_var_save(struct confctl_var *cv, const char *path, bool in_place)
-{
-
-
-}
-
 bool
 confctl_var_is_container(const struct confctl_var *cv)
 {
@@ -972,8 +965,6 @@ const char *
 confctl_var_value(struct confctl_var *cv)
 {
 
-	assert(!confctl_var_is_container(cv));
-
 	if (cv->cv_value == NULL)
 		return (NULL);
 	return (cv->cv_value->b_buf);
@@ -992,8 +983,6 @@ confctl_var_set_value(struct confctl_var *cv, const char *value)
 struct confctl_var *
 confctl_var_first_child(struct confctl_var *cv)
 {
-
-	assert(confctl_var_is_container(cv));
 
 	return (TAILQ_FIRST(&cv->cv_children));
 }

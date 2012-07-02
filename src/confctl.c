@@ -34,7 +34,6 @@
 #include "vis.h"
 
 #include "confctl.h"
-#include "confctl_private.h"
 
 static void
 usage(void)
@@ -66,7 +65,7 @@ cv_set_filtered_out(struct confctl_var *cv, bool v)
 static void
 cv_merge_existing(struct confctl_var *cv, struct confctl_var *newcv)
 {
-	struct confctl_var *child, *newchild, *tmp, *newtmp;
+	struct confctl_var *child, *newchild, *next, *newnext;
 
 	if (strcmp(confctl_var_name(cv), confctl_var_name(newcv)) != 0)
 		return;
@@ -83,16 +82,32 @@ cv_merge_existing(struct confctl_var *cv, struct confctl_var *newcv)
 		return;
 	}
 
-	TAILQ_FOREACH_SAFE(newchild, &newcv->cv_children, cv_next, newtmp) {
-		TAILQ_FOREACH_SAFE(child, &cv->cv_children, cv_next, tmp)
+	/*
+	 * This code implements this:
+	 * TAILQ_FOREACH_SAFE(newchild, &newcv->cv_children, cv_next, newtmp) {
+	 * 	TAILQ_FOREACH_SAFE(child, &cv->cv_children, cv_next, tmp)
+	 * 		cv_merge_existing(child, newchild);
+	 * }
+	 */
+	newchild = confctl_var_first_child(newcv);
+	while (newchild != NULL) {
+		newnext = confctl_var_next(newchild);
+
+		child = confctl_var_first_child(cv);
+		while (child != NULL) {
+			next = confctl_var_next(child);
 			cv_merge_existing(child, newchild);
+			child = next;
+		}
+
+		newchild = newnext;
 	}
 }
 
 static bool
 cv_merge_new(struct confctl_var *cv, struct confctl_var *newcv)
 {
-	struct confctl_var *child, *newchild, *tmp, *newtmp;
+	struct confctl_var *child, *newchild, *next, *newnext;
 	bool found;
 
 	if (strcmp(confctl_var_name(cv), confctl_var_name(newcv)) != 0)
@@ -101,15 +116,38 @@ cv_merge_new(struct confctl_var *cv, struct confctl_var *newcv)
 	if (cv_filtered_out(newcv))
 		return (true);
 
-	TAILQ_FOREACH_SAFE(newchild, &newcv->cv_children, cv_next, newtmp) {
+	/*
+	 * This code implements this:
+	 * TAILQ_FOREACH_SAFE(newchild, &newcv->cv_children, cv_next, newtmp) {
+	 * 	found = false;
+	 * 	TAILQ_FOREACH_SAFE(child, &cv->cv_children, cv_next, tmp) {
+	 * 		found = cv_merge_new(child, newchild);
+	 * 		if (found)
+	 * 			break;
+	 * 	}
+	 * 	if (!found)
+	 * 		confctl_var_move(newchild, cv);
+	 * }
+	 */
+	newchild = confctl_var_first_child(newcv);
+	while (newchild != NULL) {
+		newnext = confctl_var_next(newchild);
+
 		found = false;
-		TAILQ_FOREACH_SAFE(child, &cv->cv_children, cv_next, tmp) {
+		child = confctl_var_first_child(cv);
+		while (child != NULL) {
+			next = confctl_var_next(child);
+
 			found = cv_merge_new(child, newchild);
 			if (found)
 				break;
+
+			child = next;
 		}
 		if (!found)
 			confctl_var_move(newchild, cv);
+
+		newchild = newnext;
 	}
 
 	return (true);
@@ -136,9 +174,9 @@ cc_var_merge(struct confctl_var **cvp, struct confctl_var *merge)
 static void
 cc_var_remove(struct confctl_var *cv, struct confctl_var *remove)
 {
-	struct confctl_var *child, *removechild, *tmp;
+	struct confctl_var *child, *removechild, *next;
 
-	if (remove->cv_value != NULL)
+	if (confctl_var_value(remove) != NULL)
 		errx(1, "variable to remove must not specify a value");
 
 	if (strcmp(confctl_var_name(remove), confctl_var_name(cv)) != 0)
@@ -147,9 +185,14 @@ cc_var_remove(struct confctl_var *cv, struct confctl_var *remove)
 	if (confctl_var_first_child(remove) == NULL) {
 		confctl_var_delete(cv);
 	} else {
-		TAILQ_FOREACH_SAFE(child, &cv->cv_children, cv_next, tmp) {
-			TAILQ_FOREACH(removechild, &remove->cv_children, cv_next)
+		child = confctl_var_first_child(cv);
+		while (child != NULL) {
+			next = confctl_var_next(next);
+
+			for (removechild = confctl_var_first_child(remove); removechild != NULL; removechild = confctl_var_next(removechild))
 				cc_var_remove(child, removechild);
+
+			child = next;
 		}
 	}
 
@@ -163,7 +206,7 @@ cv_filter(struct confctl_var *cv, struct confctl_var *filter)
 	struct confctl_var *child, *filterchild;
 	bool found;
 
-	if (filter->cv_value != NULL)
+	if (confctl_var_value(filter) != NULL)
 		errx(1, "filter must not specify a value");
 
 	if (strcmp(confctl_var_name(filter), confctl_var_name(cv)) != 0)
