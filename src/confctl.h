@@ -43,14 +43,26 @@ struct confctl;
 struct confctl_var;
 
 struct confctl		*confctl_new(void);
+void			confctl_delete(struct confctl *cc);
+
+/*
+ * Syntax options.  All of these default to false.
+ */
 void			confctl_set_equals_sign(struct confctl *cc, bool equals);
 void			confctl_set_rewrite_in_place(struct confctl *cc, bool rewrite);
 void			confctl_set_semicolon(struct confctl *cc, bool semicolon);
 void			confctl_set_slash_slash_comments(struct confctl *cc, bool slash);
+
+/*
+ * Loading, writing and retrieving the root.
+ */
 void			confctl_load(struct confctl *cc, const char *path);
 void			confctl_save(struct confctl *cc, const char *path);
 struct confctl_var	*confctl_root(struct confctl *cc);
 
+/*
+ * Routines to manipulate individual nodes.
+ */
 const char		*confctl_var_name(struct confctl_var *cv);
 const char		*confctl_var_value(struct confctl_var *cv);
 void			confctl_var_set_value(struct confctl_var *cv, const char *value);
@@ -67,6 +79,11 @@ void			confctl_var_move(struct confctl_var *cv, struct confctl_var *new_parent);
  * the 'whatever' node, you'll also want to delete the 'on' one.
  */
 bool			confctl_var_is_implicit_container(struct confctl_var *cv);
+
+/*
+ * User pointer can be set to whatever value.  Initially it's NULL.  The library
+ * does not use this value in any way.
+ */
 void			*confctl_var_uptr(struct confctl_var *cv);
 void			confctl_var_set_uptr(struct confctl_var *cv, void *uptr);
 
