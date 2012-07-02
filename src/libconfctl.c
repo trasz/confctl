@@ -661,9 +661,6 @@ cv_write(struct confctl_var *cv, FILE *fp)
 {
 	struct confctl_var *child;
 
-	if (cv->cv_filtered_out)
-		return;
-
 	buf_print(cv->cv_before, fp);
 	buf_print(cv->cv_name, fp);
 	buf_print(cv->cv_middle, fp);
@@ -1044,3 +1041,22 @@ confctl_var_move(struct confctl_var *cv, struct confctl_var *parent)
 	cv_reindent(cv);
 }
 
+bool
+confctl_var_delete_when_empty(struct confctl_var *cv)
+{
+	return (cv->cv_delete_when_empty);
+}
+
+void *
+confctl_var_uptr(struct confctl_var *cv)
+{
+
+	return (cv->cv_uptr);
+}
+
+void
+confctl_var_set_uptr(struct confctl_var *cv, void *uptr)
+{
+
+	cv->cv_uptr = uptr;
+}

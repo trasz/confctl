@@ -46,6 +46,10 @@ struct confctl_var	*confctl_var_new(struct confctl_var *parent, const char *name
 void			confctl_var_delete(struct confctl_var *cv);
 void			confctl_var_move(struct confctl_var *cv, struct confctl_var *new_parent);
 
+bool			confctl_var_delete_when_empty(struct confctl_var *cv);
+void			*confctl_var_uptr(struct confctl_var *cv);
+void			confctl_var_set_uptr(struct confctl_var *cv, void *uptr);
+
 /*
  * XXX: move to confctl.c, it's confctl(1)-specific.
  */
