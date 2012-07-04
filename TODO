@@ -4,9 +4,7 @@ Things to do before 1.1:
 
  - Add test to verify that the -E actually enforces requirement for '=' sign when parsing.
 
- - Make the -S option change the way line continuation works
-   ('variable\n value;' would be ok, without the need to escape
-   the newline).
+ - Add test to verify the -S option works as it should, including line continuations.
 
  - Add modification regression tests to jail.test (depends
    on above three items).

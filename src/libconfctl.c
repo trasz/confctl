@@ -408,7 +408,7 @@ buf_read_middle(const struct confctl *cc, FILE *fp, bool *opening_bracket)
 		 * all that stuff including trailing spaces should go to cv_after,
 		 * not cv_middle.
 		 */
-		if (ch == '\n' || ch == '\r' || ch == '#' || ch == ';') {
+		if ((cc->cc_semicolon == 0 && (ch == '\n' || ch == '\r')) || ch == '#' || ch == ';') {
 			ch = ungetc(ch, fp);
 			if (ch == EOF)
 				err(1, "ungetc");
@@ -482,7 +482,7 @@ buf_read_value(const struct confctl *cc, FILE *fp, bool *opening_bracket)
 			buf_append(b, ch);
 			continue;
 		}
-		if (ch == '\n' || ch == '\r' || ch == '#' || ch == ';' || ch == '{' || ch == '}' || (ch == '/' && slashed)) {
+		if ((cc->cc_semicolon == 0 && (ch == '\n' || ch == '\r')) || ch == '#' || ch == ';' || ch == '{' || ch == '}' || (ch == '/' && slashed)) {
 			if (ch == '{')
 				*opening_bracket = true;
 			ch = ungetc(ch, fp);
