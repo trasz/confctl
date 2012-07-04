@@ -697,7 +697,7 @@ static void
 cv_reindent(struct confctl *cc, struct confctl_var *cv)
 {
 	struct buf *b = NULL;
-	struct confctl_var *prev, *child;
+	struct confctl_var *prev;
 
 	/*
 	 * Check for cv_parent, as we don't want to add brackets for the root element.
