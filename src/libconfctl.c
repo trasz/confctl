@@ -309,7 +309,27 @@ buf_read_name(const struct confctl *cc, FILE *fp)
 			buf_append(b, ch);
 			continue;
 		}
-		if (isspace(ch) || ch == '#' || ch == ';' || ch == '{' || ch == '}' || ch == '=') {
+		if (ch == '#' || ch == ';' || ch == '{' || ch == '}' || ch == '=') {
+			ch = ungetc(ch, fp);
+			if (ch == EOF)
+				err(1, "ungetc");
+			/*
+			 * All the trailing whitespace after the name should go into cv_middle.
+			 */
+			for (;;) {
+				if (b->b_len == 0)
+					break;
+				ch = buf_last(b);
+				if (!isspace(ch))
+					break;
+				buf_strip(b);
+				ch = ungetc(ch, fp);
+				if (ch == EOF)
+					err(1, "ungetc");
+			}
+			break;
+		}
+		if (isspace(ch) && cc->cc_equals_sign == 0) {
 			ch = ungetc(ch, fp);
 			if (ch == EOF)
 				err(1, "ungetc");
