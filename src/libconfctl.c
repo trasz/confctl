@@ -118,7 +118,6 @@ buf_print(struct buf *b, FILE *fp)
 
 	if (b == NULL)
 		return;
-	assert(b->b_len >= 0);
 	if (b->b_len == 0)
 		return;
 	written = fwrite(b->b_buf, b->b_len, 1, fp);
@@ -138,7 +137,7 @@ buf_unvis(struct buf *b)
 	len = strunvis(dst, b->b_buf);
 	if (len < 0)
 		err(1, "invalid escape sequence");
-	assert(len <= b->b_allocated);
+	assert(len <= (int)b->b_allocated);
 	memcpy(b->b_buf, dst, len);
 	free(dst);
 	b->b_len = len;
@@ -168,7 +167,9 @@ cv_new(struct confctl_var *parent, struct buf *name)
 	assert(name != NULL);
 
 	if (parent != NULL) {
-		// XXX: confctl_var_is_container()?
+		/*
+		 * XXX: confctl_var_is_container()?
+		 */
 		assert(parent->cv_value == NULL);
 		cv->cv_parent = parent;
 		TAILQ_INSERT_TAIL(&parent->cv_children, cv, cv_next);
@@ -267,7 +268,9 @@ unget:
 		break;
 	}
 	buf_finish(b);
-	//fprintf(stderr, "before '%s'\n", b->b_buf);
+#if 0
+	fprintf(stderr, "before '%s'\n", b->b_buf);
+#endif
 	return (b);
 }
 
@@ -356,7 +359,9 @@ buf_read_name(const struct confctl *cc, FILE *fp)
 		buf_append(b, ch);
 	}
 	buf_finish(b);
-	//fprintf(stderr, "name '%s'\n", b->b_buf);
+#if 0
+	printf(stderr, "name '%s'\n", b->b_buf);
+#endif
 	return (b);
 }
 
@@ -440,7 +445,9 @@ buf_read_middle(const struct confctl *cc, FILE *fp, bool *opening_bracket)
 		break;
 	}
 	buf_finish(b);
-	//fprintf(stderr, "middle '%s'\n", b->b_buf);
+#if 0
+	fprintf(stderr, "middle '%s'\n", b->b_buf);
+#endif
 	return (b);
 }
 
@@ -518,7 +525,9 @@ buf_read_value(const struct confctl *cc, FILE *fp, bool *opening_bracket)
 		buf_append(b, ch);
 	}
 	buf_finish(b);
-	//fprintf(stderr, "value '%s'\n", b->b_buf);
+#if 0
+	fprintf(stderr, "value '%s'\n", b->b_buf);
+#endif
 	return (b);
 }
 
@@ -586,7 +595,9 @@ unget:
 		break;
 	}
 	buf_finish(b);
-	//fprintf(stderr, "after '%s'\n", b->b_buf);
+#if 0
+	fprintf(stderr, "after '%s'\n", b->b_buf);
+#endif
 	return (b);
 }
 
