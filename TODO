@@ -1,5 +1,7 @@
 Things to do before 1.1:
 
+ - Add an option for '/* comments */'.  Perhaps make -C enable them, along with '//' ones?
+
  - Add test to verify that the -E actually enforces requirement for '=' sign when parsing.
 
  - Make the -S option change the way line continuation works
@@ -7,7 +9,7 @@ Things to do before 1.1:
    the newline).
 
  - Add modification regression tests to jail.test (depends
-   on above two items).
+   on above three items).
 
  - Add test for unvis(3) in confvar_from_line().
 
