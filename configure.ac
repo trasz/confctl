@@ -1,9 +1,9 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.61)
-AC_INIT([confctl], [1.0], [trasz@FreeBSD.org])
-AM_INIT_AUTOMAKE([-Wall foreign])
+AC_INIT([confctl], [1.1], [trasz@FreeBSD.org], [confctl], [http://github.com/trasz/confctl])
+AM_INIT_AUTOMAKE([foreign])
+
 AC_CONFIG_SRCDIR([config.h.in])
 AC_CONFIG_HEADERS([config.h])
 
