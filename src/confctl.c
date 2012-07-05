@@ -217,7 +217,7 @@ static void
 cc_remove(struct confctl *cc, struct confctl *remove)
 {
 
-	return (cv_remove(confctl_root(cc), confctl_root(remove)));
+	cv_remove(confctl_root(cc), confctl_root(remove));
 }
 
 static bool
