@@ -64,6 +64,7 @@ struct confctl_var	*confctl_root(struct confctl *cc);
  * Routines to manipulate individual nodes.
  */
 const char		*confctl_var_name(struct confctl_var *cv);
+void			confctl_var_set_name(struct confctl_var *cv, const char *name);
 const char		*confctl_var_value(struct confctl_var *cv);
 void			confctl_var_set_value(struct confctl_var *cv, const char *value);
 bool			confctl_var_is_container(const struct confctl_var *cv);

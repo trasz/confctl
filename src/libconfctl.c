@@ -1043,6 +1043,14 @@ confctl_var_name(struct confctl_var *cv)
 	return (cv->cv_name->b_buf);
 }
 
+void
+confctl_var_set_name(struct confctl_var *cv, const char *name)
+{
+
+	buf_delete(cv->cv_name);
+	cv->cv_name = buf_new_from_str(name);
+}
+
 const char *
 confctl_var_value(struct confctl_var *cv)
 {
