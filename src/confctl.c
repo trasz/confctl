@@ -119,11 +119,11 @@ cv_merge_new(struct confctl_var *cv, struct confctl_var *newcv)
 	struct confctl_var *child, *newchild, *next, *newnext;
 	bool found;
 
-	if (strcmp(confctl_var_name(cv), confctl_var_name(newcv)) != 0)
-		return (false);
-
 	if (cv_marked(newcv))
 		return (true);
+
+	if (strcmp(confctl_var_name(cv), confctl_var_name(newcv)) != 0)
+		return (false);
 
 	/*
 	 * This code implements this:
