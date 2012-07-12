@@ -67,7 +67,8 @@ const char		*confctl_var_name(struct confctl_var *cv);
 void			confctl_var_set_name(struct confctl_var *cv, const char *name);
 const char		*confctl_var_value(struct confctl_var *cv);
 void			confctl_var_set_value(struct confctl_var *cv, const char *value);
-bool			confctl_var_is_container(const struct confctl_var *cv);
+bool			confctl_var_has_children(const struct confctl_var *cv);
+bool			confctl_var_has_value(const struct confctl_var *cv);
 struct confctl_var	*confctl_var_first_child(struct confctl_var *parent);
 struct confctl_var	*confctl_var_next(struct confctl_var *cv);
 struct confctl_var	*confctl_var_new(struct confctl_var *parent, const char *name);
@@ -89,7 +90,7 @@ void			*confctl_var_uptr(struct confctl_var *cv);
 void			confctl_var_set_uptr(struct confctl_var *cv, void *uptr);
 
 /*
- * XXX: Perhaps move to confctl.c; it looks specific to confctl(1).
+ * Additional utility routines.
  */
 struct confctl		*confctl_from_line(const char *line);
 

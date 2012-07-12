@@ -79,8 +79,8 @@ cv_merge_existing(struct confctl_var *cv, struct confctl_var *newcv)
 	if (strcmp(confctl_var_name(cv), confctl_var_name(newcv)) != 0)
 		return;
 
-	if (!confctl_var_is_container(newcv)) {
-		if (confctl_var_is_container(cv))
+	if (confctl_var_has_value(newcv)) {
+		if (confctl_var_has_children(cv))
 			errx(1, "cannot replace container node with leaf node");
 		confctl_var_set_value(cv, confctl_var_value(newcv));
 		/*
@@ -299,7 +299,7 @@ cv_print(struct confctl_var *cv, FILE *fp, const char *prefix, bool values_only)
 	if (cv_marked(cv))
 		return;
 
-	if (confctl_var_is_container(cv)) {
+	if (confctl_var_has_children(cv)) {
 		name = cv_safe_name(cv);
 		if (prefix != NULL)
 			asprintf(&newprefix, "%s.%s", prefix, name);

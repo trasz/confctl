@@ -35,7 +35,6 @@
 #include <unistd.h>
 
 #include "queue.h"
-#include "vis.h"
 
 #include "confctl.h"
 #include "confctl_private.h"
@@ -126,25 +125,6 @@ buf_print(struct buf *b, FILE *fp)
 }
 
 static void
-buf_unvis(struct buf *b)
-{
-	char *dst;
-	int len;
-
-	dst = malloc(b->b_len + 1);
-	if (dst == NULL)
-		err(1, "malloc");
-	len = strunvis(dst, b->b_buf);
-	if (len < 0)
-		err(1, "invalid escape sequence");
-	assert(len <= (int)b->b_allocated);
-	memcpy(b->b_buf, dst, len);
-	free(dst);
-	b->b_len = len;
-	buf_finish(b);
-}
-
-static void
 buf_delete(struct buf *b)
 {
 
@@ -167,10 +147,7 @@ cv_new(struct confctl_var *parent, struct buf *name)
 	assert(name != NULL);
 
 	if (parent != NULL) {
-		/*
-		 * XXX: confctl_var_is_container()?
-		 */
-		assert(parent->cv_value == NULL);
+		assert(!confctl_var_has_value(parent));
 		cv->cv_parent = parent;
 		TAILQ_INSERT_TAIL(&parent->cv_children, cv, cv_next);
 	}
@@ -732,7 +709,7 @@ cv_reindent(struct confctl *cc, struct confctl_var *cv)
 		cv->cv_before = b;
 	}
 
-	if (confctl_var_is_container(cv)) {
+	if (confctl_var_has_children(cv)) {
 		if (confctl_var_first_child(cv) != NULL) {
 			/*
 			 * XXX: check before appending brackets.
@@ -867,77 +844,21 @@ confctl_save_atomic(struct confctl *cc, const char *path)
 }
 
 bool
-confctl_var_is_container(const struct confctl_var *cv)
+confctl_var_has_children(const struct confctl_var *cv)
 {
 
-	if (cv->cv_value == NULL)
+	if (!TAILQ_EMPTY(&cv->cv_children))
 		return (true);
 	return (false);
 }
 
-struct confctl *
-confctl_from_line(const char *line)
+bool
+confctl_var_has_value(const struct confctl_var *cv)
 {
-	struct confctl *root;
-	struct confctl_var *cv, *parent;
-	struct buf *b;
-	bool escaped = false, quoted = false, squoted = false;
-	int i;
-	char ch;
 
-	root = confctl_new();
-
-	parent = confctl_root(root);
-
-	b = buf_new();
-	for (i = 0;; i++) {
-		ch = line[i];
-		if (ch == '\0') {
-			buf_finish(b);
-			buf_unvis(b);
-			cv = cv_new(parent, b);
-			return (root);
-		}
-		if (escaped) {
-			buf_append(b, ch);
-			escaped = false;
-			continue;
-		}
-		if (ch == '\\') {
-			escaped = true;
-			continue;
-		}
-		if (!squoted && ch == '"')
-			quoted = !quoted;
-		if (!quoted && ch == '\'')
-			squoted = !squoted;
-		if (quoted || squoted) {
-			buf_append(b, ch);
-			continue;
-		}
-		if (ch == '.' || ch == '=') {
-			buf_finish(b);
-			buf_unvis(b);
-			cv = cv_new(parent, b);
-			b = buf_new();
-			if (ch == '.') {
-				parent = cv;
-				continue;
-			}
-			assert(ch == '=');
-			for (i++;; i++) {
-				ch = line[i];
-				if (ch == '\0') {
-					buf_finish(b);
-					buf_unvis(b);
-					cv->cv_value = b;
-					return (root);
-				}
-				buf_append(b, ch);
-			}
-		}
-		buf_append(b, ch);
-	}
+	if (cv->cv_value != NULL)
+		return (true);
+	return (false);
 }
 
 struct confctl *
@@ -1064,7 +985,7 @@ void
 confctl_var_set_value(struct confctl_var *cv, const char *value)
 {
 
-	assert(!confctl_var_is_container(cv));
+	assert(!confctl_var_has_children(cv));
 
 	buf_delete(cv->cv_value);
 	cv->cv_value = buf_new_from_str(value);
@@ -1095,7 +1016,7 @@ confctl_var_new(struct confctl_var *parent, const char *name)
 	struct confctl_var *cv;
 
 	assert(parent != NULL);
-	assert(confctl_var_is_container(parent));
+	assert(!confctl_var_has_value(parent));
 
 	cv = cv_new(parent, buf_new_from_str(name));
 
@@ -1134,7 +1055,7 @@ confctl_var_move(struct confctl_var *cv, struct confctl_var *parent)
 {
 
 	assert(parent != NULL);
-	assert(confctl_var_is_container(parent));
+	assert(!confctl_var_has_value(parent));
 
 	/*
 	 * If the parent didn't have any children, it might not have
