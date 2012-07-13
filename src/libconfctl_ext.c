@@ -42,7 +42,7 @@ confctl_from_line(const char *line)
 	struct confctl *cc;
 	struct confctl_var *cv, *parent;
 	bool escaped = false, quoted = false, squoted = false;
-	int i, len;
+	int i, j, len;
 	char ch;
 	char *copy, *name, *value;
 
@@ -53,8 +53,9 @@ confctl_from_line(const char *line)
 	cc = confctl_new();
 	parent = confctl_root(cc);
 
-	for (i = 0;; i++) {
+	for (i = 0, j = 0;; i++, j++) {
 		ch = copy[i];
+		copy[j] = copy[i];
 		if (ch == '\0') {
 			len = strunvis(name, name);
 			if (len < 0)
@@ -68,6 +69,7 @@ confctl_from_line(const char *line)
 		}
 		if (ch == '\\') {
 			escaped = true;
+			j--;
 			continue;
 		}
 		if (!squoted && ch == '"')
@@ -77,17 +79,18 @@ confctl_from_line(const char *line)
 		if (quoted || squoted)
 			continue;
 		if (ch == '.' || ch == '=') {
-			copy[i] = '\0';
+			copy[j] = '\0';
 			len = strunvis(name, name);
 			if (len < 0)
 				err(1, "invalid escape sequence");
 			cv = confctl_var_new(parent, name);
 			if (ch == '.') {
 				parent = cv;
-				name = &(copy[i + 1]);
+				name = &(copy[j + 1]);
 				continue;
 			}
 			i++;
+			j++;
 			value = &(copy[i]);
 			len = strunvis(value, value);
 			if (len < 0)
