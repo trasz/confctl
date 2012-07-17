@@ -35,3 +35,5 @@ Things to do before calling it done:
 
  - The whole cv_reindent() looks fishy.
 
+ - When handling 'a b c {', ungetch() the 'b c' and parse them as two names,
+   creating three containers in total.
