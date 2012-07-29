@@ -1,7 +1,5 @@
 Things to do before 1.1:
 
- - Add an option for '/* comments */'.  Perhaps make -C enable them, along with '//' ones?
-
  - Add test to verify that the -E actually enforces requirement for '=' sign when parsing.
 
  - Add test to verify the -S option works as it should, including line continuations.
@@ -12,6 +10,11 @@ Things to do before 1.1:
  - Add test for unvis(3) in confvar_from_line().
 
  - Add test for names with dots.
+
+ - When handling 'a b c {', ungetch() the 'b c' and parse them as two names,
+   creating three containers in total.
+
+ - Add an option for '/* comments */'.  Perhaps make -C enable them, along with '//' ones?
 
 Things to do before calling it done:
 
@@ -35,13 +38,9 @@ Things to do before calling it done:
 
  - The whole cv_reindent() looks fishy.
 
- - When handling 'a b c {', ungetch() the 'b c' and parse them as two names,
-   creating three containers in total.
-
  - Add confctl_var_to_line().
 
  - Add confctl_var_find_one(struct confctl_var *parent, const char *path)
 
  - Add confctl_var_move_after(struct confctl_var *cv, struct confctl_var *sibling);
-
 
