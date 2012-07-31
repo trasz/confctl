@@ -11,9 +11,6 @@ Things to do before 1.1:
 
  - Add test for names with dots.
 
- - When handling 'a b c {', ungetch() the 'b c' and parse them as two names,
-   creating three containers in total.
-
  - Add an option for '/* comments */'.  Perhaps make -C enable them, along with '//' ones?
 
 Things to do before calling it done:

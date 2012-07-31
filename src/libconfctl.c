@@ -583,6 +583,7 @@ cv_load(const struct confctl *cc, struct confctl_var *parent, FILE *fp)
 {
 	struct buf *before, *name, *middle, *value, *after;
 	bool closing_bracket, opening_bracket;
+	char ch;
 	struct confctl_var *cv;
 
 	/*
@@ -630,18 +631,30 @@ cv_load(const struct confctl *cc, struct confctl_var *parent, FILE *fp)
 			 * Case 3.
 			 */
 			/*
-			 * Say we have this in the configuration
-			 * file: 'on a { whatever'.  When we do
-			 * "confctl -x on.a", we want to remove not
-			 * only the 'a' node, but also its parent,
-			 * 'on'.
+			 * First, push the 'value' back into the
+			 * stream; we have to reparse it as names.
 			 */
-			cv->cv_implicit_container = true;
+			while (value->b_len > 0) {
+				ch = buf_last(value);
+				buf_strip(value);
+				ch = ungetc(ch, fp);
+				if (ch == EOF)
+					err(1, "ungetc");
+			}
+			buf_delete(value);
+			value = NULL;
 
-			middle = buf_read_middle(cc, fp, &opening_bracket);
-			assert(opening_bracket);
-			cv = cv_new(cv, value);
-			cv->cv_middle = middle;
+			for (;;) {
+				cv->cv_implicit_container = true;
+
+				name = buf_read_name(cc, fp);
+				middle = buf_read_middle(cc, fp, &opening_bracket);
+				cv = cv_new(cv, name);
+				cv->cv_middle = middle;
+
+				if (opening_bracket)
+					break;
+			}
 
 			for (;;) {
 				closing_bracket = cv_load(cc, cv, fp);
