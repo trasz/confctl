@@ -1,0 +1,32 @@
+$ rm -f s
+$ cp semicolon.conf s
+
+$ ../src/confctl -Sa s
+> a.b.c.d.var=a b\n	c d
+> a.b.c.d.name=
+
+$ ../src/confctl -Sw a.b.c.d.newname=meh s
+
+$ cat s
+> a b c
+> d {
+> 	var a b
+> 	c d;
+> 	name;
+> 	newname meh;
+> }
+>
+
+$ ../src/confctl -Sx a.b.c.d.var s
+
+# XXX: What's this empty line before 'name'?
+$ cat s
+> a b c
+> d {
+> 	
+> 	name;
+> 	newname meh;
+> }
+>
+
+$ rm -f s
