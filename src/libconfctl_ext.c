@@ -78,6 +78,8 @@ confctl_from_line(const char *line)
 			squoted = !squoted;
 		if (quoted || squoted)
 			continue;
+		if (isspace(ch))
+			errx(1, "whitespace inside variable specification");
 		if (ch == '.' || ch == '=') {
 			copy[j] = '\0';
 			len = strunvis(name, name);
