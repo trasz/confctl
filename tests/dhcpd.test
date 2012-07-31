@@ -34,6 +34,18 @@ $ cat d
 >     }
 > }
 
+$ ../src/confctl -Sx 'subnet.192\\.168\\.0\\.0.netmask.255\\.255\\.255\\.0.host.p2p' d
+
+$ cat d
+> authoritative;
+> subnet 192.168.0.0 netmask 255.255.255.0 {
+>     option broadcast-address 255.255.255.0;
+>     option routers 192.168.0.1;
+>     host foo {
+>     	bar baz;
+>     }
+> }
+
 # XXX: The 'bar baz;' above has wrong indent (tab instead of only spaces); it should be:
 # >         bar baz;
 
