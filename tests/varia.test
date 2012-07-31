@@ -81,4 +81,64 @@ $ cat v
 > 
 > # that's all, folks.
 
+$ ../src/confctl -w 'dotted\\.name=123' -w 'embedded\\\\nnewline=456' v
+
+$ cat v
+> # Opening comment
+> # on top
+> # of the file.
+> 
+> varia {
+> 	# meh
+> 	x new-x	# x with value
+> 	z new-z	# z without value
+> 	# another variable goes here
+> 	1 {
+> 		escaped\ name
+> 		"quoted name" val\\ue\
+> 			same value
+> 		quoted-newlines	'from here
+> 			to here'
+> 		"escape\"check" "in\"value"
+> 		'squoted name'
+> 		'escaped\'squote' 'in\'value'
+> 
+> 		xxx value \# with hash
+> 		yyy same thing '# different way'
+> 		yy2 same thing "# different way"
+> 
+> 		'quoted " squote'
+> 		"squoted ' quote"
+> 		escaped	\{ brackets \}
+> 		quoted '{' brackets '}'
+> 
+> 		# comment before 2
+> 		2 {
+> 			3 {
+> 				4 5; 6 # comment for 6
+> 			}
+> 			
+> 			meh
+> 			moo
+> 
+> 		} # comment after 2
+> 	}
+> 	new-var meh
+> 
+> 	# nothing interesting here
+> 
+> }
+> 
+> # Who said there must always be a name?
+> {
+> 	var val; { meh }
+> 	{{{{{{ xxx }}}}}}
+> }
+> outside-of-1 wzium
+> dotted.name 123
+> embedded
+> newline 456
+> 
+> # that's all, folks.
+
 $ rm -f v
