@@ -70,6 +70,10 @@ it, replacing the old file.  This will fail if it's impossible to create
 new files, and won't do the right thing when the file name is a symlink.
 In that case, use "-I" option to rewrite configuration file in place.
 
+There are several options modifying the syntax to adapt common file formats,
+such as the ones used by dhcpd.conf or jail.conf.  See the files in the test/
+subdirectory to see how to handle these files.
+
 Code
 ====
 
