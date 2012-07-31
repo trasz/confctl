@@ -1,7 +1,7 @@
 $ rm -f j
 $ cp jail.conf j
 
-$ ../src/confctl -a j
+$ ../src/confctl -Ca j
 > exec.start="/bin/sh /etc/rc"
 > exec.stop="/bin/sh /etc/rc.shutdown"
 > exec.clean=
