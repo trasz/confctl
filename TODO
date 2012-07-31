@@ -1,7 +1,5 @@
 Things to do before 1.1:
 
- - Add test to verify that the -E actually enforces requirement for '=' sign when parsing.
-
  - Add test to verify the -S option works as it should, including line continuations.
 
  - Add modification regression tests to jail.test (depends

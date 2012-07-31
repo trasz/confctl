@@ -309,7 +309,7 @@ buf_read_name(const struct confctl *cc, FILE *fp)
 			}
 			break;
 		}
-		if (isspace(ch) && cc->cc_equals_sign == 0) {
+		if ((isspace(ch) && cc->cc_equals_sign == 0) || (ch == '\n' || ch == '\r')) {
 			ch = ungetc(ch, fp);
 			if (ch == EOF)
 				err(1, "ungetc");
