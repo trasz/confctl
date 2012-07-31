@@ -735,12 +735,12 @@ cv_reindent(struct confctl *cc, struct confctl_var *cv)
 		}
 	} else {
 		if (cv->cv_value != NULL && cv->cv_value->b_len > 0 && (cv->cv_middle == NULL || cv->cv_middle->b_len == 0)) {
-			if (cc->cc_equals_sign)
+			if (cc->cc_equals_sign && (cv->cv_middle == NULL || cv->cv_middle->b_len == 0))
 				cv->cv_middle = buf_new_from_str(" = ");
 			else
 				cv->cv_middle = buf_new_from_str(" ");
 		}
-		if (cc->cc_semicolon)
+		if (cc->cc_semicolon && (cv->cv_after == NULL || cv->cv_after->b_len == 0))
 			cv->cv_after = buf_new_from_str(";");
 	}
 }
