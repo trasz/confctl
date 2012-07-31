@@ -1,7 +1,7 @@
 $ rm -f j
 $ cp jail.conf j
 
-$ ../src/confctl -Ca j
+$ ../src/confctl -CESa j
 > exec.start="/bin/sh /etc/rc"
 > exec.stop="/bin/sh /etc/rc.shutdown"
 > exec.clean=
@@ -14,5 +14,52 @@ $ ../src/confctl -Ca j
 > bar.path=/
 > bar.mount.nodevfs=
 > bar.persist=
+
+# Note that the double backslashes are for the 'run' utility;
+# use single backslash when invoking directly.
+$ ../src/confctl -CESw 'foo.host\\.hostname="baz.com"' -w bar.persist=yes j
+
+$ ../src/confctl -CESa j
+> exec.start="/bin/sh /etc/rc"
+> exec.stop="/bin/sh /etc/rc.shutdown"
+> exec.clean=
+> mount.devfs=
+> path="/var/jail/$name"
+> foo.host.hostname="baz.com"
+> foo.ip4.addr=10.1.1.1, 10.1.1.2, 10.1.1.3
+> bar.exec.start=''
+> bar.exec.stop=''
+> bar.path=/
+> bar.mount.nodevfs=
+> bar.persist=yes
+
+$ ../src/confctl -CESx foo j
+
+$ ../src/confctl -CESw 'baz.host\\.hostname="baz.com"' -w 'baz.ip4\\.addr=10.1.1.1, 10.1.1.2, 10.1.1.3' j
+
+$ cat j
+> # Typical static defaults:
+> # Use the rc scripts to start and stop jails.  Mount jail's /dev.
+> exec.start = "/bin/sh /etc/rc";
+> exec.stop = "/bin/sh /etc/rc.shutdown";
+> exec.clean;
+> mount.devfs;
+> 
+> # Dynamic wildcard parameter:
+> # Base the path off the jail name.
+> path = "/var/jail/$name";
+> 
+> # This jail overrides the defaults defined above.
+> bar {
+>      exec.start = '';
+>      exec.stop = '';
+>      path=/;
+>      mount.nodevfs;
+>      persist = yes;        // Required because there are no processes
+> }
+> baz {
+> 	host.hostname = "baz.com";
+> 	ip4.addr = 10.1.1.1, 10.1.1.2, 10.1.1.3;
+> }
 
 $ rm -f j

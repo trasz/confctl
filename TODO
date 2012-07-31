@@ -1,8 +1,5 @@
 Things to do before 1.1:
 
- - Add modification regression tests to jail.test (depends
-   on above three items).
-
  - Add test for unvis(3) in confvar_from_line().
 
  - Add test for names with dots.
