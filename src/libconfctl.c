@@ -173,7 +173,7 @@ ungetc_checked(int ch, FILE *fp)
 
 	ch = ungetc(ch, fp);
 	if (ch == EOF)
-		err(1, "ungetc");
+		errx(1, "ungetc failed");
 }
 
 static void
