@@ -2,27 +2,14 @@ Things to do before 1.1:
 
  - Test build under FreeBSD and Linux.
 
-Things to do before calling it done:
 
- - Properly bail out on EOF without closing curly brackets.
-
- - Consider rewriting the parser using regexps; it's getting complicated.
+Things to do before 1.2:
 
  - Mimick cv_middle from existing entries, so that newly added
    variables get a proper spacing between variable name and value.
 
  - Mimick cv_after from existing entries, so that newly added
    variables get a semicolon, if the rest of the file uses it.
-
- - Currently we always treat names without values as names,
-   so things like 'meh { 1; 2; 3 }' became 'meh.1=\n meh.2\n meh.3'.
-   Add an option to make them as values without names, like this:
-   'meh=1\n meh=2\n meh=3'.  This would make nicer output for
-   JunOS-like config.
-
- - Consider adding some automatic quote handling.
-
- - The whole cv_reindent() looks fishy.
 
  - Add confctl_var_to_line().
 
@@ -31,6 +18,23 @@ Things to do before calling it done:
  - Add confctl_var_move_after(struct confctl_var *cv, struct confctl_var *sibling);
 
  - Build shared library.
+
+ - Consider adding some automatic quote handling.
+
+
+Things to do before calling it done:
+
+ - Properly bail out on EOF without closing curly brackets.
+
+ - Consider rewriting the parser using regexps; it's getting complicated.
+
+- Currently we always treat names without values as names,
+   so things like 'meh { 1; 2; 3 }' became 'meh.1=\n meh.2\n meh.3'.
+   Add an option to make them as values without names, like this:
+   'meh=1\n meh=2\n meh=3'.  This would make nicer output for
+   JunOS-like config.
+
+ - The whole cv_reindent() looks fishy.
 
  - We can't handle '/* comments */' in the value, like this: 'name val /* comment */ ue;'.
 
