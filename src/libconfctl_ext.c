@@ -29,6 +29,7 @@
  * of the stuff implemented in libconfctl.c.
  */
 
+#include <ctype.h>
 #include <err.h>
 #include <stdbool.h>
 #include <string.h>
