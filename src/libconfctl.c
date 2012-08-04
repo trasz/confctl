@@ -399,7 +399,7 @@ buf_read_name(const struct confctl *cc, FILE *fp)
 	}
 	buf_finish(b);
 #if 0
-	printf(stderr, "name '%s'\n", b->b_buf);
+	fprintf(stderr, "name '%s'\n", b->b_buf);
 #endif
 	return (b);
 }
