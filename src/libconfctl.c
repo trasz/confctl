@@ -169,6 +169,15 @@ cv_new_root(void)
 }
 
 static void
+ungetc_checked(int ch, FILE *fp)
+{
+
+	ch = ungetc(ch, fp);
+	if (ch == EOF)
+		err(1, "ungetc");
+}
+
+static void
 buf_read_until_newline(struct buf *b, FILE *fp)
 {
 	int ch;
@@ -221,9 +230,7 @@ buf_read_slashed(struct buf *b, const struct confctl *cc, FILE *fp)
 		buf_read_until_star_slash(b, fp);
 		return (true);
 	} else {
-		ch = ungetc(ch, fp);
-		if (ch == EOF)
-			err(1, "ungetc");
+		ungetc_checked(ch, fp);
 		return (false);
 	}
 }
@@ -295,9 +302,7 @@ buf_read_before(const struct confctl *cc, FILE *fp, bool *closing_bracket)
 			continue;
 		}
 unget:
-		ch = ungetc(ch, fp);
-		if (ch == EOF)
-			err(1, "ungetc");
+		ungetc_checked(ch, fp);
 		break;
 	}
 	buf_finish(b);
@@ -345,9 +350,7 @@ buf_read_name(const struct confctl *cc, FILE *fp)
 			continue;
 		}
 		if (ch == '#' || ch == ';' || ch == '{' || ch == '}' || ch == '=') {
-			ch = ungetc(ch, fp);
-			if (ch == EOF)
-				err(1, "ungetc");
+			ungetc_checked(ch, fp);
 			/*
 			 * All the trailing whitespace after the name should go into cv_middle.
 			 */
@@ -358,9 +361,7 @@ buf_read_name(const struct confctl *cc, FILE *fp)
 				if (!isspace(ch))
 					break;
 				buf_strip(b);
-				ch = ungetc(ch, fp);
-				if (ch == EOF)
-					err(1, "ungetc");
+				ungetc_checked(ch, fp);
 			}
 			break;
 		}
@@ -368,13 +369,9 @@ buf_read_name(const struct confctl *cc, FILE *fp)
 		 * C++-style comments should go into cv_middle.
 		 */
 		if (slashed && ((ch == '/' && cc->cc_slash_slash_comments) || (ch == '*' && cc->cc_slash_star_comments))) {
-			ch = ungetc(ch, fp);
-			if (ch == EOF)
-				err(1, "ungetc");
+			ungetc_checked(ch, fp);
 			buf_strip(b);
-			ch = ungetc('/', fp);
-			if (ch == EOF)
-				err(1, "ungetc");
+			ungetc_checked('/', fp);
 			/*
 			 * All the trailing whitespace before the comment should go into cv_middle as well.
 			 */
@@ -385,9 +382,7 @@ buf_read_name(const struct confctl *cc, FILE *fp)
 				if (!isspace(ch))
 					break;
 				buf_strip(b);
-				ch = ungetc(ch, fp);
-				if (ch == EOF)
-					err(1, "ungetc");
+				ungetc_checked(ch, fp);
 			}
 			break;
 		}
@@ -397,9 +392,7 @@ buf_read_name(const struct confctl *cc, FILE *fp)
 			slashed = false;
 
 		if ((isspace(ch) && cc->cc_equals_sign == 0) || (ch == '\n' || ch == '\r')) {
-			ch = ungetc(ch, fp);
-			if (ch == EOF)
-				err(1, "ungetc");
+			ungetc_checked(ch, fp);
 			break;
 		}
 		buf_append(b, ch);
@@ -442,15 +435,11 @@ buf_read_middle(const struct confctl *cc, FILE *fp, bool *opening_bracket)
 				 * in cv_middle are newlines.  All the rest
 				 * goes to cv_value.
 				 */
-				ch = ungetc(ch, fp);
-				if (ch == EOF)
-					err(1, "ungetc");
+				ungetc_checked(ch, fp);
 				ch = buf_last(b);
 				assert(ch == '\\');
 				buf_strip(b);
-				ch = ungetc(ch, fp);
-				if (ch == EOF)
-					err(1, "ungetc");
+				ungetc_checked(ch, fp);
 				break;
 			}
 		}
@@ -460,9 +449,7 @@ buf_read_middle(const struct confctl *cc, FILE *fp, bool *opening_bracket)
 		 * not cv_middle.
 		 */
 		if ((cc->cc_semicolon == 0 && (ch == '\n' || ch == '\r')) || ch == '#' || ch == ';') {
-			ch = ungetc(ch, fp);
-			if (ch == EOF)
-				err(1, "ungetc");
+			ungetc_checked(ch, fp);
 			for (;;) {
 				if (b->b_len == 0)
 					break;
@@ -470,9 +457,7 @@ buf_read_middle(const struct confctl *cc, FILE *fp, bool *opening_bracket)
 				if (!isspace(ch) && ch != '=')
 					break;
 				buf_strip(b);
-				ch = ungetc(ch, fp);
-				if (ch == EOF)
-					err(1, "ungetc");
+				ungetc_checked(ch, fp);
 			}
 			break;
 		}
@@ -485,9 +470,7 @@ buf_read_middle(const struct confctl *cc, FILE *fp, bool *opening_bracket)
 			buf_append(b, ch);
 			continue;
 		}
-		ch = ungetc(ch, fp);
-		if (ch == EOF)
-			err(1, "ungetc");
+		ungetc_checked(ch, fp);
 		break;
 	}
 	buf_finish(b);
@@ -539,9 +522,7 @@ buf_read_value(const struct confctl *cc, FILE *fp, bool *opening_bracket)
 		if ((cc->cc_semicolon == 0 && (ch == '\n' || ch == '\r')) || ch == '#' || ch == ';' || ch == '{' || ch == '}') {
 			if (ch == '{')
 				*opening_bracket = true;
-			ch = ungetc(ch, fp);
-			if (ch == EOF)
-				err(1, "ungetc");
+			ungetc_checked(ch, fp);
 			/*
 			 * All the trailing whitespace after the value should go into cv_after.
 			 */
@@ -552,9 +533,7 @@ buf_read_value(const struct confctl *cc, FILE *fp, bool *opening_bracket)
 				if (!isspace(ch))
 					break;
 				buf_strip(b);
-				ch = ungetc(ch, fp);
-				if (ch == EOF)
-					err(1, "ungetc");
+				ungetc_checked(ch, fp);
 			}
 			break;
 		}
@@ -562,13 +541,9 @@ buf_read_value(const struct confctl *cc, FILE *fp, bool *opening_bracket)
 		 * C++-style comments should go into cv_after.
 		 */
 		if (slashed && ((ch == '/' && cc->cc_slash_slash_comments) || (ch == '*' && cc->cc_slash_star_comments))) {
-			ch = ungetc(ch, fp);
-			if (ch == EOF)
-				err(1, "ungetc");
+			ungetc_checked(ch, fp);
 			buf_strip(b);
-			ch = ungetc('/', fp);
-			if (ch == EOF)
-				err(1, "ungetc");
+			ungetc_checked('/', fp);
 			/*
 			 * All the trailing whitespace before the comment should go into cv_after as well.
 			 */
@@ -579,9 +554,7 @@ buf_read_value(const struct confctl *cc, FILE *fp, bool *opening_bracket)
 				if (!isspace(ch))
 					break;
 				buf_strip(b);
-				ch = ungetc(ch, fp);
-				if (ch == EOF)
-					err(1, "ungetc");
+				ungetc_checked(ch, fp);
 			}
 			break;
 		}
@@ -638,9 +611,7 @@ buf_read_after(const struct confctl *cc, FILE *fp)
 			continue;
 		}
 unget:
-		ch = ungetc(ch, fp);
-		if (ch == EOF)
-			err(1, "ungetc");
+		ungetc_checked(ch, fp);
 		break;
 	}
 	buf_finish(b);
@@ -709,9 +680,7 @@ cv_load(const struct confctl *cc, struct confctl_var *parent, FILE *fp)
 			while (value->b_len > 0) {
 				ch = buf_last(value);
 				buf_strip(value);
-				ch = ungetc(ch, fp);
-				if (ch == EOF)
-					err(1, "ungetc");
+				ungetc_checked(ch, fp);
 			}
 			buf_delete(value);
 			value = NULL;
