@@ -34,3 +34,5 @@ Things to do before calling it done:
 
  - We can't handle '/* comments */' in the value, like this: 'name val /* comment */ ue;'.
 
+ - We don't handle '/* comments */' between name and value.
+

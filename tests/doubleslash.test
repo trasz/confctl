@@ -7,11 +7,24 @@ $ ../src/confctl -Ca d
 > double.slashed.slash_in_value=foo / bar
 > double.slashed.quoted_slash="foo / bar"
 > double.slashed.squoted_slash='foo / bar'
+> double.slashed.quoted_doubleslash='foo // bar'
+> double.slashed.quoted_block='foo /* bar */'
+> double.slashed.escaped_double=\\// meh
+> double.slashed.escaped_block=\\/* foo
+> double.slashed.escaped_block2=/\\* foo
 > double.slashed.spaced=foo / / bar
+> double.slashed.spaced_block=foo / * bar
+> double.slashed.after_eol=v
+> double.slashed.after_block=v2
+> double.slashed.inline=
 
 $ ../src/confctl -C -w double.x=new-x -w double.y=new-y -w double.slashed./var=new/val -w double.slashed.no_val=meh -w outside-of-1=wzium d
 $ cat d
+> # /* meh
 > double {
+> 	/*
+> 	 * perfectly valid block comment
+> 	 */// and line comment.
 > 	slashed {
 > 		// Test for handling "// comments"
 > 		/var new/val//comment
@@ -19,8 +32,17 @@ $ cat d
 > 		slash_in_value foo / bar
 > 		quoted_slash "foo / bar"
 > 		squoted_slash 'foo / bar' // boring
+> 		quoted_doubleslash 'foo // bar'
+> 		quoted_block 'foo /* bar */'
+> 		escaped_double \// meh
+> 		escaped_block \/* foo
+> 		escaped_block2 /\* foo
 > 		spaced foo / / bar
-> 	}
+> 		spaced_block foo / * bar
+> 		after_eol v// after
+> 		after_block v2/* after2 *//* after3 */
+> 		/* before */inline
+> 	}// after
 > 	x new-x
 > 	y new-y
 > }
