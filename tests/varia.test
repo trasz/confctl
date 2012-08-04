@@ -77,6 +77,10 @@ $ cat v
 > 	var val; { meh }
 > 	{{{{{{ xxx }}}}}}
 > }
+> 
+> meh {
+> 	# no value, no children
+> }
 > outside-of-1 wzium
 > 
 > # that's all, folks.
@@ -133,6 +137,10 @@ $ cat v
 > {
 > 	var val; { meh }
 > 	{{{{{{ xxx }}}}}}
+> }
+> 
+> meh {
+> 	# no value, no children
 > }
 > outside-of-1 wzium
 > dotted.name 123

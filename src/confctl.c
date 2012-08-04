@@ -311,7 +311,7 @@ cv_print(struct confctl_var *cv, FILE *fp, const char *prefix, bool values_only)
 		for (child = confctl_var_first_child(cv); child != NULL; child = confctl_var_next(child))
 			cv_print(child, fp, newprefix, values_only);
 		free(newprefix);
-	} else {
+	} else if (confctl_var_has_value(cv)) {
 		value = cv_safe_value(cv);
 		if (values_only) {
 			fprintf(fp, "%s\n", value);
