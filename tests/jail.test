@@ -45,14 +45,16 @@ $ cat j
 > exec.clean;
 > mount.devfs;
 > 
-> # Dynamic wildcard parameter:
-> # Base the path off the jail name.
+> /*
+>  * Dynamic wildcard parameter:
+>  * Base the path off the jail name.
+>  */
 > path = "/var/jail/$name";
 > 
 > # This jail overrides the defaults defined above.
 > bar {
 >      exec.start = '';
->      exec.stop = '';
+>      exec.stop = ''; /* whatever */
 >      path=/;
 >      mount.nodevfs;
 >      persist = yes;        // Required because there are no processes
