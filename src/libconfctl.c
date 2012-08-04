@@ -915,6 +915,13 @@ confctl_set_slash_slash_comments(struct confctl *cc, bool slash)
 	cc->cc_slash_slash_comments = slash;
 }
 
+void
+confctl_set_slash_star_comments(struct confctl *cc, bool star)
+{
+
+	cc->cc_slash_star_comments = star;
+}
+
 void	
 confctl_load(struct confctl *cc, const char *path)
 {

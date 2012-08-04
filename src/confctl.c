@@ -407,6 +407,7 @@ main(int argc, char **argv)
 	confctl_set_rewrite_in_place(cc, Iflag);
 	confctl_set_semicolon(cc, Sflag);
 	confctl_set_slash_slash_comments(cc, Cflag);
+	confctl_set_slash_star_comments(cc, Cflag);
 	confctl_load(cc, argv[0]);
 	if (merge == NULL && remove == NULL) {
 		if (!aflag) {

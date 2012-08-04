@@ -65,6 +65,7 @@ struct confctl {
 	bool			cc_rewrite_in_place;
 	bool			cc_semicolon;
 	bool			cc_slash_slash_comments;
+	bool			cc_slash_star_comments;
 };
 
 #endif /* !CONFCTL_PRIVATE_H */
