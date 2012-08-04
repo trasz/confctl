@@ -1,7 +1,5 @@
 Things to do before 1.1:
 
- - Add an option for '/* comments */'.  Perhaps make -C enable them, along with '//' ones?
-
  - Fix problem with missing newline at EOF.
 
 Things to do before calling it done:
@@ -33,4 +31,6 @@ Things to do before calling it done:
  - Add confctl_var_move_after(struct confctl_var *cv, struct confctl_var *sibling);
 
  - Build shared library.
+
+ - We can't handle '/* comments */' in the value, like this: 'name val /* comment */ ue;'.
 

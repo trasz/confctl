@@ -177,13 +177,54 @@ buf_read_until_newline(struct buf *b, FILE *fp)
 		ch = getc(fp);
 		if (ch == EOF)
 			break;
-		if (ch == '\n' || ch == '\r') {
-			ch = ungetc(ch, fp);
-			if (ch == EOF)
-				err(1, "ungetc");
-			break;
-		}
 		buf_append(b, ch);
+		if (ch == '\n' || ch == '\r')
+			break;
+	}
+}
+
+static void
+buf_read_until_star_slash(struct buf *b, FILE *fp)
+{
+	int ch;
+	bool asterisked = false;
+
+	for (;;) {
+		ch = getc(fp);
+		if (ch == EOF)
+			break;
+		buf_append(b, ch);
+		if (asterisked && ch == '/')
+			break;
+		if (ch == '*')
+			asterisked = true;
+		else
+			asterisked = false;
+	}
+}
+
+static bool
+buf_read_slashed(struct buf *b, const struct confctl *cc, FILE *fp)
+{
+	int ch;
+
+	ch = getc(fp);
+	if (ch == EOF)
+		return (false);
+
+	if (ch == '/' && cc->cc_slash_slash_comments) {
+		buf_append(b, ch);
+		buf_read_until_newline(b, fp);
+		return (true);
+	} else if (ch == '*' && cc->cc_slash_star_comments) {
+		buf_append(b, ch);
+		buf_read_until_star_slash(b, fp);
+		return (true);
+	} else {
+		ch = ungetc(ch, fp);
+		if (ch == EOF)
+			err(1, "ungetc");
+		return (false);
 	}
 }
 
@@ -192,7 +233,7 @@ buf_read_before(const struct confctl *cc, FILE *fp, bool *closing_bracket)
 {
 	int ch;
 	struct buf *b;
-	bool no_newline = false, slashed = false;
+	bool no_newline = false, comment_parsed;
 
 	*closing_bracket = false;
 
@@ -206,29 +247,37 @@ buf_read_before(const struct confctl *cc, FILE *fp, bool *closing_bracket)
 		}
 		if (no_newline && (ch == '\n' || ch == '\r' || ch == '}'))
 			goto unget;
-		if (ch != '/') {
-			if (slashed)
+		/*
+		 * Handle C++-style comments.
+		 */
+		if (ch == '/') {
+			buf_append(b, ch);
+			comment_parsed = buf_read_slashed(b, cc, fp);
+			if (!comment_parsed) {
+				buf_strip(b);
 				goto unget;
-			slashed = false;
+			}
+			if (no_newline) {
+				ch = buf_last(b);
+				if (ch == '\n' || ch == '\r') {
+					buf_strip(b);
+					goto unget;
+				}
+			}
+			continue;
 		}
+		/*
+		 * Handle shell-style comments.
+		 */
 		if (ch == '#') {
 			buf_append(b, ch);
 			buf_read_until_newline(b, fp);
-			continue;
-		}
-		if (cc->cc_slash_slash_comments) {
-			/*
-			 * Handle "// comments".
-			 */
-			if (ch == '/') {
-				buf_append(b, ch);
-				if (slashed) {
-					slashed = false;
-					buf_read_until_newline(b, fp);
-				} else
-					slashed = true;
-				continue;
+			if (no_newline) {
+				ch = buf_last(b);
+				buf_strip(b);
+				goto unget;
 			}
+			continue;
 		}
 		/*
 		 * This is somewhat tricky - this piece of code is also used
@@ -249,12 +298,6 @@ unget:
 		ch = ungetc(ch, fp);
 		if (ch == EOF)
 			err(1, "ungetc");
-		if (slashed) {
-			buf_strip(b);
-			ch = ungetc('/', fp);
-			if (ch == EOF)
-				err(1, "ungetc");
-		}
 		break;
 	}
 	buf_finish(b);
@@ -281,17 +324,15 @@ buf_read_name(const struct confctl *cc, FILE *fp)
 			break;
 		}
 		if (escaped) {
+			assert(!slashed);
 			buf_append(b, ch);
 			escaped = false;
 			continue;
 		}
-		if (cc->cc_slash_slash_comments) {
-			if (ch != '/')
-				slashed = false;
-		}
 		if (ch == '\\') {
-			escaped = true;
 			buf_append(b, ch);
+			escaped = true;
+			slashed = false;
 			continue;
 		}
 		if (!squoted && ch == '"')
@@ -300,6 +341,7 @@ buf_read_name(const struct confctl *cc, FILE *fp)
 			squoted = !squoted;
 		if (quoted || squoted) {
 			buf_append(b, ch);
+			slashed = false;
 			continue;
 		}
 		if (ch == '#' || ch == ';' || ch == '{' || ch == '}' || ch == '=') {
@@ -322,29 +364,43 @@ buf_read_name(const struct confctl *cc, FILE *fp)
 			}
 			break;
 		}
+		/*
+		 * C++-style comments should go into cv_middle.
+		 */
+		if (slashed && ((ch == '/' && cc->cc_slash_slash_comments) || (ch == '*' && cc->cc_slash_star_comments))) {
+			ch = ungetc(ch, fp);
+			if (ch == EOF)
+				err(1, "ungetc");
+			buf_strip(b);
+			ch = ungetc('/', fp);
+			if (ch == EOF)
+				err(1, "ungetc");
+			/*
+			 * All the trailing whitespace before the comment should go into cv_middle as well.
+			 */
+			for (;;) {
+				if (b->b_len == 0)
+					break;
+				ch = buf_last(b);
+				if (!isspace(ch))
+					break;
+				buf_strip(b);
+				ch = ungetc(ch, fp);
+				if (ch == EOF)
+					err(1, "ungetc");
+			}
+			break;
+		}
+		if (ch == '/')
+			slashed = true;
+		else
+			slashed = false;
+
 		if ((isspace(ch) && cc->cc_equals_sign == 0) || (ch == '\n' || ch == '\r')) {
 			ch = ungetc(ch, fp);
 			if (ch == EOF)
 				err(1, "ungetc");
 			break;
-		}
-		if (cc->cc_slash_slash_comments) {
-			/*
-			 * Handle "// comments".
-			 */
-			if (ch == '/') {
-				if (slashed) {
-					ch = ungetc(ch, fp);
-					if (ch == EOF)
-						err(1, "ungetc");
-					buf_strip(b);
-					ch = ungetc('/', fp);
-					if (ch == EOF)
-						err(1, "ungetc");
-					break;
-				}
-				slashed = true;
-			}
 		}
 		buf_append(b, ch);
 	}
@@ -460,15 +516,15 @@ buf_read_value(const struct confctl *cc, FILE *fp, bool *opening_bracket)
 			break;
 		}
 		if (escaped) {
+			assert(!slashed);
 			buf_append(b, ch);
 			escaped = false;
 			continue;
 		}
-		if (ch != '/')
-			slashed = false;
 		if (ch == '\\') {
-			escaped = true;
 			buf_append(b, ch);
+			escaped = true;
+			slashed = false;
 			continue;
 		}
 		if (!squoted && ch == '"')
@@ -477,21 +533,15 @@ buf_read_value(const struct confctl *cc, FILE *fp, bool *opening_bracket)
 			squoted = !squoted;
 		if (quoted || squoted) {
 			buf_append(b, ch);
+			slashed = false;
 			continue;
 		}
-		if ((cc->cc_semicolon == 0 && (ch == '\n' || ch == '\r')) || ch == '#' || ch == ';' || ch == '{' || ch == '}' || (ch == '/' && slashed)) {
+		if ((cc->cc_semicolon == 0 && (ch == '\n' || ch == '\r')) || ch == '#' || ch == ';' || ch == '{' || ch == '}') {
 			if (ch == '{')
 				*opening_bracket = true;
 			ch = ungetc(ch, fp);
 			if (ch == EOF)
 				err(1, "ungetc");
-			if (slashed) {
-				buf_strip(b);
-				ch = ungetc('/', fp);
-				if (ch == EOF)
-					err(1, "ungetc");
-			}
-
 			/*
 			 * All the trailing whitespace after the value should go into cv_after.
 			 */
@@ -508,10 +558,39 @@ buf_read_value(const struct confctl *cc, FILE *fp, bool *opening_bracket)
 			}
 			break;
 		}
-		if (cc->cc_slash_slash_comments) {
-			if (ch == '/')
-				slashed = true;
+		/*
+		 * C++-style comments should go into cv_after.
+		 */
+		if (slashed && ((ch == '/' && cc->cc_slash_slash_comments) || (ch == '*' && cc->cc_slash_star_comments))) {
+			ch = ungetc(ch, fp);
+			if (ch == EOF)
+				err(1, "ungetc");
+			buf_strip(b);
+			ch = ungetc('/', fp);
+			if (ch == EOF)
+				err(1, "ungetc");
+			/*
+			 * All the trailing whitespace before the comment should go into cv_after as well.
+			 */
+			for (;;) {
+				if (b->b_len == 0)
+					break;
+				ch = buf_last(b);
+				if (!isspace(ch))
+					break;
+				buf_strip(b);
+				ch = ungetc(ch, fp);
+				if (ch == EOF)
+					err(1, "ungetc");
+			}
+			break;
 		}
+
+		if (ch == '/')
+			slashed = true;
+		else
+			slashed = false;
+
 		buf_append(b, ch);
 	}
 	buf_finish(b);
@@ -526,7 +605,7 @@ buf_read_after(const struct confctl *cc, FILE *fp)
 {
 	int ch;
 	struct buf *b;
-	bool slashed = false;
+	bool comment_parsed;
 
 	b = buf_new();
 
@@ -534,37 +613,27 @@ buf_read_after(const struct confctl *cc, FILE *fp)
 		ch = getc(fp);
 		if (ch == EOF)
 			break;
-		if (ch != '/') {
-			if (slashed)
+		/*
+		 * Handle C++-style comments.
+		 */
+		if (ch == '/') {
+			buf_append(b, ch);
+			comment_parsed = buf_read_slashed(b, cc, fp);
+			if (!comment_parsed) {
+				buf_strip(b);
 				goto unget;
-			slashed = false;
+			}
+			continue;
 		}
-		if (ch == '\n' || ch == '\r') {
-			ch = ungetc(ch, fp);
-			if (ch == EOF)
-				err(1, "ungetc");
-			break;
-		}
+		/*
+		 * Handle shell-style comments.
+		 */
 		if (ch == '#') {
 			buf_append(b, ch);
 			buf_read_until_newline(b, fp);
 			continue;
 		}
-		if (cc->cc_slash_slash_comments) {
-			/*
-			 * Handle "// comments".
-			 */
-			if (ch == '/') {
-				buf_append(b, ch);
-				if (slashed) {
-					slashed = false;
-					buf_read_until_newline(b, fp);
-				} else
-					slashed = true;
-				continue;
-			}
-		}
-		if (isspace(ch) || ch == ';') {
+		if ((isspace(ch) && ch != '\n' && ch != '\r') || ch == ';') {
 			buf_append(b, ch);
 			continue;
 		}
@@ -572,12 +641,6 @@ unget:
 		ch = ungetc(ch, fp);
 		if (ch == EOF)
 			err(1, "ungetc");
-		if (slashed) {
-			buf_strip(b);
-			ch = ungetc('/', fp);
-			if (ch == EOF)
-				err(1, "ungetc");
-		}
 		break;
 	}
 	buf_finish(b);
