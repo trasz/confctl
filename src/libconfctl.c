@@ -168,12 +168,31 @@ cv_new_root(void)
 	return (cv);
 }
 
+static void
+buf_read_until_newline(struct buf *b, FILE *fp)
+{
+	int ch;
+
+	for (;;) {
+		ch = getc(fp);
+		if (ch == EOF)
+			break;
+		if (ch == '\n' || ch == '\r') {
+			ch = ungetc(ch, fp);
+			if (ch == EOF)
+				err(1, "ungetc");
+			break;
+		}
+		buf_append(b, ch);
+	}
+}
+
 static struct buf *
 buf_read_before(const struct confctl *cc, FILE *fp, bool *closing_bracket)
 {
 	int ch;
 	struct buf *b;
-	bool comment = false, no_newline = false, slashed = false;
+	bool no_newline = false, slashed = false;
 
 	*closing_bracket = false;
 
@@ -192,15 +211,9 @@ buf_read_before(const struct confctl *cc, FILE *fp, bool *closing_bracket)
 				goto unget;
 			slashed = false;
 		}
-		if (comment) {
-			if (ch == '\n' || ch == '\r')
-				comment = false;
-			buf_append(b, ch);
-			continue;
-		}
 		if (ch == '#') {
-			comment = true;
 			buf_append(b, ch);
+			buf_read_until_newline(b, fp);
 			continue;
 		}
 		if (cc->cc_slash_slash_comments) {
@@ -208,12 +221,12 @@ buf_read_before(const struct confctl *cc, FILE *fp, bool *closing_bracket)
 			 * Handle "// comments".
 			 */
 			if (ch == '/') {
+				buf_append(b, ch);
 				if (slashed) {
 					slashed = false;
-					comment = true;
+					buf_read_until_newline(b, fp);
 				} else
 					slashed = true;
-				buf_append(b, ch);
 				continue;
 			}
 		}
@@ -513,7 +526,7 @@ buf_read_after(const struct confctl *cc, FILE *fp)
 {
 	int ch;
 	struct buf *b;
-	bool comment = false, slashed = false;
+	bool slashed = false;
 
 	b = buf_new();
 
@@ -532,13 +545,9 @@ buf_read_after(const struct confctl *cc, FILE *fp)
 				err(1, "ungetc");
 			break;
 		}
-		if (comment) {
-			buf_append(b, ch);
-			continue;
-		}
 		if (ch == '#') {
-			comment = true;
 			buf_append(b, ch);
+			buf_read_until_newline(b, fp);
 			continue;
 		}
 		if (cc->cc_slash_slash_comments) {
@@ -546,12 +555,12 @@ buf_read_after(const struct confctl *cc, FILE *fp)
 			 * Handle "// comments".
 			 */
 			if (ch == '/') {
+				buf_append(b, ch);
 				if (slashed) {
 					slashed = false;
-					comment = true;
+					buf_read_until_newline(b, fp);
 				} else
 					slashed = true;
-				buf_append(b, ch);
 				continue;
 			}
 		}

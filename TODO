@@ -2,6 +2,8 @@ Things to do before 1.1:
 
  - Add an option for '/* comments */'.  Perhaps make -C enable them, along with '//' ones?
 
+ - Fix problem with missing newline at EOF.
+
 Things to do before calling it done:
 
  - Properly bail out on EOF without closing curly brackets.
