@@ -1,6 +1,6 @@
 Things to do before 1.1:
 
- - Fix problem with missing newline at EOF.
+ - Test build under FreeBSD and Linux.
 
 Things to do before calling it done:
 

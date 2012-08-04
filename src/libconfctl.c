@@ -753,8 +753,22 @@ cv_reindent(struct confctl *cc, struct confctl_var *cv)
 			b = buf_get_indent(prev);
 		if (b == NULL) {
 			b = buf_get_indent(cv->cv_parent);
-			if (b == NULL)
-				b = buf_new_from_str("\n");
+			if (b == NULL) {
+				/*
+				 * For the first variable in file, cv_before should an be empty string,
+				 * to avoid empty line on the top of the newly created file.
+				 */
+				if (cv->cv_parent->cv_parent == NULL && TAILQ_PREV(cv, confctl_var_head, cv_next) == NULL) {
+					b = buf_new_from_str("");
+					/*
+					 * If the cv_after for the root node is empty, add newline there,
+					 * to make sure the file ends with a newline.
+					 */
+					if (cv->cv_parent->cv_after->b_len == 0)
+						cv->cv_parent->cv_after = buf_new_from_str("\n");
+				} else
+					b = buf_new_from_str("\n");
+			}
 			if (cv->cv_parent->cv_parent != NULL) {
 				buf_append(b, '\t');
 				buf_finish(b);
