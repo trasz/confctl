@@ -84,7 +84,6 @@ buf_last(struct buf *b)
 	assert(b->b_len >= 1);
 
 	ch = b->b_buf[b->b_len - 1];
-	assert(ch != '\0');
 
 	return (ch);
 }
