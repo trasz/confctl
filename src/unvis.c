@@ -97,7 +97,7 @@ unvis(char *cp, int c, int *astate, int flag)
 			*astate = S_OCTAL2;
 			return (0);
 		case 'M':
-			*cp = 0200;
+			*cp = (char)0200;
 			*astate = S_META;
 			return (0);
 		case '^':
