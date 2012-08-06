@@ -23,6 +23,7 @@
  * SUCH DAMAGE.
  */
 
+#define	_GNU_SOURCE
 #include <sys/file.h>
 #include <assert.h>
 #include <ctype.h>
