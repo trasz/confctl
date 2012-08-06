@@ -60,6 +60,7 @@
  * other
  */
 #define	VIS_NOSLASH	0x40	/* inhibit printing '\' */
+#define	VIS_HTTPSTYLE	0x80	/* http-style escape % HEX HEX */
 #define	VIS_GLOB	0x100	/* encode glob(3) magics and '#' */
 
 /*
@@ -81,7 +82,7 @@ int	strvis(char *, const char *, int);
 int	strnvis(char *, const char *, size_t, int);
 int	strvisx(char *, const char *, size_t, int);
 int	strunvis(char *, const char *);
-int	unvis(char *, char, int *, int);
+int	unvis(char *, int, int *, int);
 ssize_t strnunvis(char *, const char *, size_t);
 
 #endif /* !_VIS_H_ */
