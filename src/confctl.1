@@ -5,21 +5,21 @@
 .SH NAME
 confctl \- sysctl-like tool for config files
 .SH SYNOPSIS
-.B confctl [-CEIS] -a [-n]
-.I config-file
+.B confctl [\-CEIS] \-a [\-n]
+.I config\-file
 .br
-.B confctl [-CEIS] [-n]
-.I config-file
-.I variable-name
+.B confctl [\-CEIS] [\-n]
+.I config\-file
+.I variable\-name
 .B ...
 .br
-.B confctl [-CEIS] -w
-.I variable-name=value
-.I config-file
+.B confctl [\-CEIS] \-w
+.I variable\-name=value
+.I config\-file
 .br
-.B confctl [-CEIS] -x
-.I variable-name
-.I config-file
+.B confctl [\-CEIS] \-x
+.I variable\-name
+.I config\-file
 .SH DESCRIPTION
 .B confctl
 provides access to configuration files in C-like syntax
@@ -28,27 +28,27 @@ via
 interface, making it easy to use from shell scripts.
 .PP
 The following options are available:
-.IP -a
+.IP \-a
 Show all the variables and their values.
-.IP -n
+.IP \-n
 Show only values, not names.
-.IP -w
+.IP \-w
 Change value of configuration variable and update the configuration
 file.
 Variable is created if it doesn't yet exist.
-.IP -x
+.IP \-x
 Delete the variable and update the configuration file.
-.IP -C
+.IP \-C
 Recognize C++ double slash ('//') and slash star ('/* ... */') comment markers.
-.IP -E
+.IP \-E
 Use equals sign (' = ') to separate values from names.
 Without this option, the equals sign is ignored, i.e. treated as whitespace.
-.IP -I
+.IP \-I
 Instead of writing a temporary file and then atomically replacing
 the configuration file, rewrite it in place.
 It also makes confctl acquire a file lock when reading or writing
 the configuration file.
-.IP -S
+.IP \-S
 Use semicolon (';') after values.
 Note that the semicolon is always treated as terminating character
 when parsing, regardless of this option.
@@ -70,7 +70,7 @@ interfaces {
 .fi
 .PP
 You can access all the variables like this (note the
-.B -a
+.B \-a
 option):
 .PP
 .nf
@@ -90,7 +90,7 @@ interfaces.eth1.ip-address=192.168.2.1
 .fi
 .PP
 To modify a variable, use the
-.B -w
+.B \-w
 option:
 .PP
 .nf
@@ -98,7 +98,7 @@ option:
 .fi
 .PP
 You can pass the
-.B -w
+.B \-w
 option multiple times to set several variables
 at once.  You use exactly the same syntax to add new variables:
 .PP
@@ -135,7 +135,7 @@ copy of the file, in the same containing directory, and then renaming
 it, replacing the old file.  This will fail if it's impossible to create
 new files, and won't do the right thing when the file name is a symlink.
 In that case, use
-.B -I
+.B \-I
 option to rewrite configuration file in place.
 .SH AUTHOR
 Edward Tomasz Napierala <trasz@FreeBSD.org>
