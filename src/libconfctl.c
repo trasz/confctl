@@ -1128,6 +1128,8 @@ confctl_var_delete(struct confctl_var *cv)
 
 	if (cv->cv_parent != NULL)
 		TAILQ_REMOVE(&cv->cv_parent->cv_children, cv, cv_next);
+
+	free(cv);
 }
 
 void
