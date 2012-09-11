@@ -197,16 +197,17 @@ cv_remove(struct confctl_var *cv, struct confctl_var *remove)
 
 	if (confctl_var_first_child(remove) == NULL) {
 		confctl_var_delete(cv);
-	} else {
-		child = confctl_var_first_child(cv);
-		while (child != NULL) {
-			next = confctl_var_next(child);
+		return;
+	}
 
-			for (removechild = confctl_var_first_child(remove); removechild != NULL; removechild = confctl_var_next(removechild))
-				cv_remove(child, removechild);
+	child = confctl_var_first_child(cv);
+	while (child != NULL) {
+		next = confctl_var_next(child);
 
-			child = next;
-		}
+		for (removechild = confctl_var_first_child(remove); removechild != NULL; removechild = confctl_var_next(removechild))
+			cv_remove(child, removechild);
+
+		child = next;
 	}
 
 	if (confctl_var_is_implicit_container(cv) && confctl_var_first_child(cv) == NULL)
