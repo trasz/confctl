@@ -23,7 +23,7 @@ Things to do before calling it done:
 
  - Consider rewriting the parser using regexps; it's getting complicated.
 
-- Currently we always treat names without values as names,
+ - Currently we always treat names without values as names,
    so things like 'meh { 1; 2; 3 }' became 'meh.1=\n meh.2\n meh.3'.
    Add an option to make them as values without names, like this:
    'meh=1\n meh=2\n meh=3'.  This would make nicer output for
