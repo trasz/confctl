@@ -1116,10 +1116,15 @@ confctl_var_delete(struct confctl_var *cv)
 		confctl_var_delete(child);
 
 	buf_delete(cv->cv_before);
+	cv->cv_value = NULL;
 	buf_delete(cv->cv_name);
+	cv->cv_name = NULL;
 	buf_delete(cv->cv_middle);
+	cv->cv_middle = NULL;
 	buf_delete(cv->cv_value);
+	cv->cv_value = NULL;
 	buf_delete(cv->cv_after);
+	cv->cv_after = NULL;
 
 	if (cv->cv_parent != NULL)
 		TAILQ_REMOVE(&cv->cv_parent->cv_children, cv, cv_next);
