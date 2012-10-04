@@ -1,0 +1,2 @@
+version=3
+https://github.com/trasz/confctl/tags .*/tarball/(\d[\d\.]+)

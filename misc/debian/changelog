@@ -1,0 +1,5 @@
+confctl (1.1-1) unstable; urgency=low
+
+  * Initial release (Closes: #684200)
+
+ -- Edward Tomasz Napierala <trasz@FreeBSD.org>  Fri, 10 Aug 2012 18:46:24 +0200

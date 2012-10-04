@@ -1,0 +1,72 @@
+Index: confctl-1.1/src/confctl.1
+===================================================================
+--- confctl-1.1.orig/src/confctl.1	2012-08-11 12:45:11.000000000 +0200
++++ confctl-1.1/src/confctl.1	2012-08-11 12:58:51.000000000 +0200
+@@ -74,19 +74,19 @@
+ option):
+ .PP
+ .nf
+-% confctl -a config-file
+-interfaces.eth0.ip-address=192.168.1.1
++% confctl \-a config\-file
++interfaces.eth0.ip\-address=192.168.1.1
+ interfaces.eth0.mtu=9000
+-interfaces.eth1.ip-address=192.168.2.1
++interfaces.eth1.ip\-address=192.168.2.1
+ interfaces.eth1.description="Uplink to Telia"
+ .fi
+ .PP
+ You can also query individual variables:
+ .PP
+ .nf
+-% confctl config-file interfaces.eth0.ip-address interfaces.eth1.ip-address 
+-interfaces.eth0.ip-address=192.168.1.1
+-interfaces.eth1.ip-address=192.168.2.1
++% confctl config\-file interfaces.eth0.ip\-address interfaces.eth1.ip\-address
++interfaces.eth0.ip\-address=192.168.1.1
++interfaces.eth1.ip\-address=192.168.2.1
+ .fi
+ .PP
+ To modify a variable, use the
+@@ -94,7 +94,7 @@
+ option:
+ .PP
+ .nf
+-% confctl -w interfaces.eth0.ip-address=192.168.1.2 config-file
++% confctl \-w interfaces.eth0.ip\-address=192.168.1.2 config\-file
+ .fi
+ .PP
+ You can pass the
+@@ -103,25 +103,25 @@
+ at once.  You use exactly the same syntax to add new variables:
+ .PP
+ .nf
+-% confctl -w interfaces.eth2.ip-address=10.0.0.1 -w interfaces.eth2.netmask=24 config-file
+-% confctl config-file interfaces.eth2
+-interfaces.eth2.ip-address=10.0.0.1
++% confctl \-w interfaces.eth2.ip\-address=10.0.0.1 \-w interfaces.eth2.netmask=24 config\-file
++% confctl config\-file interfaces.eth2
++interfaces.eth2.ip\-address=10.0.0.1
+ interfaces.eth2.netmask=24
+-% cat config-file
++% cat config\-file
+ 
+ interfaces {
+ 	eth0 {
+-		ip-address	192.168.1.1
++		ip\-address	192.168.1.1
+ 		mtu		9000
+ 	}
+ 
+ 	eth1 {
+-		ip-address	192.168.2.1
++		ip\-address	192.168.2.1
+ 		description	"Uplink to Telia"
+ 	}
+ 
+ 	eth2 {
+-		ip-address	10.0.0.1
++		ip\-address	10.0.0.1
+ 		netmask		24
+ 	}
+ }

@@ -1,0 +1,18 @@
+Source: confctl
+Section: utils
+Priority: optional
+Maintainer: Edward Tomasz Napierala <trasz@FreeBSD.org>
+Build-Depends: debhelper (>= 9), autotools-dev
+Standards-Version: 3.9.3
+Homepage: https://github.com/trasz/confctl
+#Vcs-Git: git://git.debian.org/collab-maint/confctl.git
+#Vcs-Browser: http://git.debian.org/?p=collab-maint/confctl.git;a=summary
+
+Package: confctl
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Utility to parse and modify C-like configuration files
+ Confctl is a command line utility to provide access to configuration
+ files with C-like syntax, such as dhcpd.conf, providing user interface
+ similar to sysctl(8).  It allows for retrieving, modifying, adding
+ and removing variables, while preserving comments and formatting.
