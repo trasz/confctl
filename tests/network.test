@@ -1,17 +1,17 @@
 $ rm -f n
 $ cp network.conf n
 
-$ ../src/confctl -a n
+$ $VALGRIND ../src/confctl -a n
 > interfaces.eth0.ip-address=192.168.1.1
 > interfaces.eth0.mtu=9000
 > interfaces.eth1.ip-address=192.168.2.1
 > interfaces.eth1.description="Uplink to Telia"
 
-$ ../src/confctl n interfaces.eth0.ip-address interfaces.eth1.ip-address 
+$ $VALGRIND ../src/confctl n interfaces.eth0.ip-address interfaces.eth1.ip-address 
 > interfaces.eth0.ip-address=192.168.1.1
 > interfaces.eth1.ip-address=192.168.2.1
 
-$ ../src/confctl -w interfaces.eth0.ip-address=192.168.1.2 n
+$ $VALGRIND ../src/confctl -w interfaces.eth0.ip-address=192.168.1.2 n
 
 $ cat n
 > interfaces {
@@ -29,9 +29,9 @@ $ cat n
 > 	} # meh
 > }
 
-$ ../src/confctl -w interfaces.eth2.ip-address=10.0.0.1 -w interfaces.eth2.netmask=24 n
+$ $VALGRIND ../src/confctl -w interfaces.eth2.ip-address=10.0.0.1 -w interfaces.eth2.netmask=24 n
 
-$ ../src/confctl n interfaces.eth2
+$ $VALGRIND ../src/confctl n interfaces.eth2
 > interfaces.eth2.ip-address=10.0.0.1
 > interfaces.eth2.netmask=24
 

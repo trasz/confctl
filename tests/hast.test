@@ -1,7 +1,7 @@
 $ rm -f h
 $ cp hast.conf h
 
-$ ../src/confctl -a h
+$ $VALGRIND ../src/confctl -a h
 > listen=tcp://0.0.0.0
 > on.hasta.listen=tcp://2001:db8::1/64
 > on.hastb.listen=tcp://2001:db8::2/64
@@ -15,15 +15,15 @@ $ ../src/confctl -a h
 > resource.tank.on.hastb.source=tcp://10.0.0.2
 > resource.tank.on.hastb.remote=tcp://10.0.0.1
 
-$ ../src/confctl -w resource.shared.local=/dev/da1 h
-$ ../src/confctl h resource.shared
+$ $VALGRIND ../src/confctl -w resource.shared.local=/dev/da1 h
+$ $VALGRIND ../src/confctl h resource.shared
 > resource.shared.local=/dev/da1
 > resource.shared.on.hasta.remote=tcp://10.0.0.2
 > resource.shared.on.hastb.remote=tcp://10.0.0.1
 
-$ ../src/confctl -x resource.tank.on.hasta h
+$ $VALGRIND ../src/confctl -x resource.tank.on.hasta h
 
-$ ../src/confctl -a h
+$ $VALGRIND ../src/confctl -a h
 > listen=tcp://0.0.0.0
 > on.hasta.listen=tcp://2001:db8::1/64
 > on.hastb.listen=tcp://2001:db8::2/64

@@ -1,7 +1,7 @@
 $ rm -f d
 $ cp doubleslash.conf d
 
-$ ../src/confctl -Ca d
+$ $VALGRIND ../src/confctl -Ca d
 > double.slashed./var=/val
 > double.slashed.no_val=
 > double.slashed.slash_in_value=foo / bar
@@ -18,7 +18,7 @@ $ ../src/confctl -Ca d
 > double.slashed.after_block=v2
 > double.slashed.inline=
 
-$ ../src/confctl -C -w double.x=new-x -w double.y=new-y -w double.slashed./var=new/val -w double.slashed.no_val=meh -w outside-of-1=wzium d
+$ $VALGRIND ../src/confctl -C -w double.x=new-x -w double.y=new-y -w double.slashed./var=new/val -w double.slashed.no_val=meh -w outside-of-1=wzium d
 $ cat d
 > # /* meh
 > double {

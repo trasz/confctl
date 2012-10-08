@@ -1,7 +1,7 @@
 $ rm -f v
 $ cp varia.conf v
 
-$ ../src/confctl -a v
+$ $VALGRIND ../src/confctl -a v
 > varia.x=y
 > varia.z=
 > varia.1.escaped\\ name=
@@ -25,7 +25,7 @@ $ ../src/confctl -a v
 > ..meh=
 > .......xxx=
 
-$ ../src/confctl -w varia.x=new-x -w varia.z=new-z -w varia.new-var=meh -w outside-of-1=wzium v
+$ $VALGRIND ../src/confctl -w varia.x=new-x -w varia.z=new-z -w varia.new-var=meh -w outside-of-1=wzium v
 $ cat v
 > # Opening comment
 > # on top
@@ -85,7 +85,7 @@ $ cat v
 > 
 > # that's all, folks.
 
-$ ../src/confctl -w 'dotted\\.name=123' -w 'embedded\\\\nnewline=456' v
+$ $VALGRIND ../src/confctl -w 'dotted\\.name=123' -w 'embedded\\\\nnewline=456' v
 
 $ cat v
 > # Opening comment

@@ -4,7 +4,7 @@
 $ rm -f d
 $ cp devd.conf d
 
-$ ../src/confctl -CSa d
+$ $VALGRIND ../src/confctl -CSa d
 > options.directory="/etc/devd"
 > options.directory="/usr/local/etc/devd"
 > options.pid-file="/var/run/devd.pid"

@@ -1,7 +1,7 @@
 $ rm -f d
 $ cp duplicate.conf d
 
-$ ../src/confctl -a d
+$ $VALGRIND ../src/confctl -a d
 > 1.before-hole=foo
 > 1.in-all=meh
 > 2.doesnt=matter
@@ -9,8 +9,8 @@ $ ../src/confctl -a d
 > 1.after-hole=bar
 > 1.in-all=meh
 
-$ ../src/confctl -w 1.after-hole=newbar -w 1.before-hole=newfoo d
-$ ../src/confctl -a d
+$ $VALGRIND ../src/confctl -w 1.after-hole=newbar -w 1.before-hole=newfoo d
+$ $VALGRIND ../src/confctl -a d
 > 1.before-hole=newfoo
 > 1.in-all=meh
 > 2.doesnt=matter
@@ -18,8 +18,8 @@ $ ../src/confctl -a d
 > 1.after-hole=newbar
 > 1.in-all=meh
 
-$ ../src/confctl -w 1.in-all=duplicate d
-$ ../src/confctl -a d
+$ $VALGRIND ../src/confctl -w 1.in-all=duplicate d
+$ $VALGRIND ../src/confctl -a d
 > 1.before-hole=newfoo
 > 1.in-all=duplicate
 > 2.doesnt=matter

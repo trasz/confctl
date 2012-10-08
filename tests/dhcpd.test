@@ -1,7 +1,7 @@
 $ rm -f d
 $ cp dhcpd.conf d
 
-$ ../src/confctl -Sa d
+$ $VALGRIND ../src/confctl -Sa d
 > authoritative=
 > subnet.192.168.0.0.netmask.255.255.255.0.option=broadcast-address 255.255.255.0
 > subnet.192.168.0.0.netmask.255.255.255.0.option=routers 192.168.0.1
@@ -9,9 +9,9 @@ $ ../src/confctl -Sa d
 > subnet.192.168.0.0.netmask.255.255.255.0.host.p2p.fixed-address=192.168.0.13
 
 # Note that the additional backslashes are discarded by the run script.
-$ ../src/confctl -Sw 'subnet.192\\.168\\.0\\.0.netmask.255\\.255\\.255\\.0.host\\ foo.bar=baz' d
+$ $VALGRIND ../src/confctl -Sw 'subnet.192\\.168\\.0\\.0.netmask.255\\.255\\.255\\.0.host\\ foo.bar=baz' d
 
-$ ../src/confctl -Sa d
+$ $VALGRIND ../src/confctl -Sa d
 > authoritative=
 > subnet.192.168.0.0.netmask.255.255.255.0.option=broadcast-address 255.255.255.0
 > subnet.192.168.0.0.netmask.255.255.255.0.option=routers 192.168.0.1
@@ -34,7 +34,7 @@ $ cat d
 >     }
 > }
 
-$ ../src/confctl -Sx 'subnet.192\\.168\\.0\\.0.netmask.255\\.255\\.255\\.0.host.p2p' d
+$ $VALGRIND ../src/confctl -Sx 'subnet.192\\.168\\.0\\.0.netmask.255\\.255\\.255\\.0.host.p2p' d
 
 $ cat d
 > authoritative;

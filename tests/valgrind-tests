@@ -1,0 +1,5 @@
+#!/bin/sh
+
+export VALGRIND='valgrind --tool=memcheck --dsymutil=yes -q'
+for t in *.test; do ./run $t; done
+

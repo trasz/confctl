@@ -1,14 +1,14 @@
 $ rm -f x
 $ cp x.conf x
 
-$ ../src/confctl -a x
+$ $VALGRIND ../src/confctl -a x
 > 1.2.3.4.5=meh
 > 1.2.useless=
 > 1.x=
 > 1.2.3.4.5.foo=bar
 > 1.2.3.4.5.6.baz=
 
-$ ../src/confctl -x 1.2.3.4.5 -x 1.2.useless x
+$ $VALGRIND ../src/confctl -x 1.2.3.4.5 -x 1.2.useless x
 $ cat x
 > 1 {
 > 	# Comment for 2.

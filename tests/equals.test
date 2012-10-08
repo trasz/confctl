@@ -1,16 +1,16 @@
 $ rm -f e
 $ cp equals.conf e
 
-$ ../src/confctl -Ea e
+$ $VALGRIND ../src/confctl -Ea e
 > spaced name=1
 > spaced a \\= 2=
 > 'spaced = c' 3=
 > 'spaced = d'=4 = 5
 
 # Expected to do nothing.
-$ ../src/confctl -Ex spaced e
+$ $VALGRIND ../src/confctl -Ex spaced e
 
-$ ../src/confctl -Ew 'spaced.new=meh' e
+$ $VALGRIND ../src/confctl -Ew 'spaced.new=meh' e
 
 $ cat e
 > spaced name = 1
