@@ -1110,9 +1110,9 @@ confctl_var_new(struct confctl_var *parent, const char *name)
 void
 confctl_var_delete(struct confctl_var *cv)
 {
-	struct confctl_var *child;
+	struct confctl_var *child, *tmp;
 
-	TAILQ_FOREACH(child, &cv->cv_children, cv_next)
+	TAILQ_FOREACH_SAFE(child, &cv->cv_children, cv_next, tmp)
 		confctl_var_delete(child);
 
 	buf_delete(cv->cv_before);
