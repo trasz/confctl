@@ -1,7 +1,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_INIT([confctl], [1.1], [trasz@FreeBSD.org], [confctl], [http://github.com/trasz/confctl])
+AC_INIT([confctl], [1.2], [trasz@FreeBSD.org], [confctl], [http://github.com/trasz/confctl])
 AM_INIT_AUTOMAKE([foreign])
 
 AC_CONFIG_SRCDIR([config.h.in])

@@ -1,4 +1,4 @@
-Things to do before 1.2:
+Things to do before 1.3:
 
  - Mimick cv_middle from existing entries, so that newly added
    variables get a proper spacing between variable name and value.
