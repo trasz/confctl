@@ -61,7 +61,7 @@ confctl_from_line(const char *line)
 			len = strunvis(name, name);
 			if (len < 0)
 				err(1, "invalid escape sequence");
-			cv = confctl_var_new(parent, name);
+			confctl_var_new(parent, name);
 			return (cc);
 		}
 		if (escaped) {
