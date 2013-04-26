@@ -874,11 +874,11 @@ static void
 confctl_save_atomic(struct confctl *cc, const char *path)
 {
 	FILE *fp;
-	int error, fd;
+	int error, fd, written;
 	char *tmppath = NULL;
 
-	asprintf(&tmppath, "%s.XXXXXXXXX", path);
-	if (tmppath == NULL)
+	written = asprintf(&tmppath, "%s.XXXXXXXXX", path);
+	if (written < 0)
 		err(1, "asprintf");
 	fd = mkstemp(tmppath);
 	if (fd < 0)

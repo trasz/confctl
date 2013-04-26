@@ -296,6 +296,7 @@ cv_print(struct confctl_var *cv, FILE *fp, const char *prefix, bool values_only)
 {
 	struct confctl_var *child;
 	char *newprefix, *name, *value;
+	int written;
 
 	if (cv_marked(cv))
 		return;
@@ -303,11 +304,11 @@ cv_print(struct confctl_var *cv, FILE *fp, const char *prefix, bool values_only)
 	if (confctl_var_has_children(cv)) {
 		name = cv_safe_name(cv);
 		if (prefix != NULL)
-			asprintf(&newprefix, "%s.%s", prefix, name);
+			written = asprintf(&newprefix, "%s.%s", prefix, name);
 		else
-			asprintf(&newprefix, "%s", name);
+			written = asprintf(&newprefix, "%s", name);
 		free(name);
-		if (newprefix == NULL)
+		if (written < 0)
 			err(1, "asprintf");
 		for (child = confctl_var_first_child(cv); child != NULL; child = confctl_var_next(child))
 			cv_print(child, fp, newprefix, values_only);
